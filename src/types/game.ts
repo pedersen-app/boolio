@@ -1,5 +1,7 @@
 export type LogicOperation = 'AND' | 'OR' | 'NOT' | 'XOR'
 
+export type InferenceRule = 'conjunction'
+
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'advanced' | 'expert'
 
 export type GameMode = 'practice' | 'test'

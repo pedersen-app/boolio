@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import BoolioMascot from './components/BoolioMascot.vue'
-import OperationSelector from './components/OperationSelector.vue'
 import TruthTable from './components/TruthTable.vue'
-import { logicOperations } from './logic/gates'
 import { generateQuestion } from './logic/questionGenerator'
 import { awardCorrectAnswer } from './logic/scoring'
-import type { Difficulty, Exercise, GameMode, GameScore, LogicOperation, ScoreByMode } from './types/game'
+import type { Difficulty, Exercise, GameMode, GameScore, InferenceRule, LogicOperation, ScoreByMode } from './types/game'
 
 const correctMessages = [
   'Amazing thinking! You got it!',
@@ -15,6 +13,7 @@ const correctMessages = [
 ]
 const modes: GameMode[] = ['practice', 'test']
 const difficulties: Difficulty[] = ['easy', 'medium', 'hard', 'advanced', 'expert']
+const inferenceRules: InferenceRule[] = ['conjunction']
 const modeLabels: Record<GameMode, string> = {
   practice: 'Practice',
   test: 'Test',
@@ -26,10 +25,22 @@ const difficultyLabels: Record<Difficulty, string> = {
   advanced: 'Advanced',
   expert: 'Expert',
 }
+const inferenceRuleLabels: Record<InferenceRule, string> = {
+  conjunction: 'Conjunction (AND)',
+}
+const operationsByInferenceRuleAndDifficulty: Record<InferenceRule, Record<Difficulty, LogicOperation[]>> = {
+  conjunction: {
+    easy: ['AND'],
+    medium: ['AND'],
+    hard: ['AND'],
+    advanced: ['AND'],
+    expert: ['AND'],
+  },
+}
 
 const mode = ref<GameMode>('practice')
-const operation = ref<LogicOperation>('AND')
 const difficulty = ref<Difficulty>('easy')
+const inferenceRule = ref<InferenceRule>('conjunction')
 const scores = ref<ScoreByMode>(loadScores())
 const exercise = ref<Exercise>(generateQuestion(nextOperation(mode.value), difficulty.value))
 const answers = ref<Record<string, boolean>>({})
@@ -48,13 +59,8 @@ watch(scores, (newScores) => {
   }
 }, { deep: true })
 
-watch([mode, operation, difficulty], ([nextMode, nextOperation, nextDifficulty], [prevMode, prevOperation, prevDifficulty]) => {
-  if (nextMode !== prevMode || nextDifficulty !== prevDifficulty) {
-    startNextQuestion()
-    return
-  }
-
-  if (nextMode === 'practice' && nextOperation !== prevOperation) {
+watch([mode, difficulty, inferenceRule], ([nextMode, nextDifficulty, nextInferenceRule], [prevMode, prevDifficulty, prevInferenceRule]) => {
+  if (nextMode !== prevMode || nextDifficulty !== prevDifficulty || nextInferenceRule !== prevInferenceRule) {
     startNextQuestion()
   }
 })
@@ -93,10 +99,18 @@ function isGameScore(value: unknown): value is GameScore {
     && 'stars' in value && typeof value.stars === 'number'
 }
 
+function allowedOperations(currentInferenceRule: InferenceRule, currentDifficulty: Difficulty): LogicOperation[] {
+  return operationsByInferenceRuleAndDifficulty[currentInferenceRule][currentDifficulty] ?? ['AND']
+}
+
 function nextOperation(currentMode: GameMode) {
-  if (currentMode === 'practice') return operation.value
-  const index = Math.floor(Math.random() * logicOperations.length)
-  return logicOperations[index] ?? 'AND'
+  const availableOperations = allowedOperations(inferenceRule.value, difficulty.value)
+  const fallbackOperation = availableOperations[0] ?? 'AND'
+
+  if (currentMode === 'practice') return fallbackOperation
+
+  const index = Math.floor(Math.random() * availableOperations.length)
+  return availableOperations[index] ?? fallbackOperation
 }
 
 function startNextQuestion() {
@@ -198,12 +212,25 @@ function checkAnswers() {
                   </option>
                 </select>
               </label>
+
+              <label class="session-field" for="inference-rule-select">
+                <span class="session-label">Inference rule</span>
+                <select id="inference-rule-select" v-model="inferenceRule" class="session-select" aria-label="Choose inference rule">
+                  <option v-for="rule in inferenceRules" :key="rule" :value="rule">
+                    {{ inferenceRuleLabels[rule] }}
+                  </option>
+                </select>
+              </label>
             </div>
           </div>
 
-          <OperationSelector v-if="mode === 'practice'" v-model="operation" />
-          <div v-else class="test-mode-note" aria-live="polite">
-            Test mode picks a random gate every puzzle. Current gate: <strong>{{ exercise.operation }}</strong>
+          <div class="test-mode-note" aria-live="polite">
+            <template v-if="mode === 'practice'">
+              Practice mode uses the selected inference rule. Current gate: <strong>{{ exercise.operation }}</strong>
+            </template>
+            <template v-else>
+              Test mode picks a random gate from your inference rule and difficulty. Current gate: <strong>{{ exercise.operation }}</strong>
+            </template>
           </div>
 
           <div class="rule-line">
