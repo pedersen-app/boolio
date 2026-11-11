@@ -30,16 +30,16 @@ describe('Boolean gates', () => {
 })
 
 describe('question generation', () => {
-  it('hides one easy answer while keeping the answer key separate', () => {
+  it('requires answers for every easy row while keeping the answer key separate', () => {
     const exercise = generateQuestion('AND', 'easy', undefined, () => 0)
-    expect(exercise.missingRowIds).toHaveLength(1)
-    expect(exercise.rows.filter((row) => row.output === null)).toHaveLength(1)
+    expect(exercise.missingRowIds).toHaveLength(exercise.rows.length)
+    expect(exercise.rows.filter((row) => row.output === null)).toHaveLength(exercise.rows.length)
     expect(Object.keys(exercise.answerKey)).toHaveLength(4)
   })
 
-  it('hides two medium answers and keeps every generated answer correct', () => {
+  it('requires answers for every medium row and keeps every generated answer correct', () => {
     const exercise = generateQuestion('XOR', 'medium', undefined, () => 0)
-    expect(exercise.missingRowIds).toHaveLength(2)
+    expect(exercise.missingRowIds).toHaveLength(exercise.rows.length)
     for (const row of exercise.rows) {
       const expected = row.inputs[0] !== row.inputs[1]
       expect(exercise.answerKey[row.id]).toBe(expected)

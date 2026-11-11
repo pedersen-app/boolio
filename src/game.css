@@ -74,12 +74,50 @@ h1 span { color: var(--caramel); }
 .play-layout { display: grid; grid-template-columns: 1fr; gap: clamp(12px, 2vw, 18px); align-items: stretch; }
 .puzzle-panel { min-width: 0; padding: clamp(18px, 2.7vw, 28px) clamp(14px, 2.6vw, 28px) clamp(16px, 2.2vw, 22px); border: 1px solid rgba(36, 92, 67, .14); border-radius: 8px; background: var(--cream-light); box-shadow: 0 12px 30px rgba(80, 77, 52, .07); container-type: inline-size; }
 .puzzle-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 19px; }
+.session-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.session-field { min-width: 170px; display: grid; gap: 4px; }
+.session-label { color: #7e877d; font-size: 10px; line-height: 1.2; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.session-select {
+  min-height: 40px;
+  padding: 0 34px 0 12px;
+  border: 1px solid #d7d6ca;
+  border-radius: 7px;
+  color: #4c574d;
+  background-color: #f8f5eb;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #7a8178 50%),
+    linear-gradient(135deg, #7a8178 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% - 3px),
+    calc(100% - 11px) calc(50% - 3px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  appearance: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.session-select:focus-visible {
+  outline: 3px solid #e29a48;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(242, 166, 90, .3);
+}
 .section-kicker { color: var(--caramel); }
 h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia, serif; font-size: clamp(20px, 0.88rem + 1.1vw, 24px); line-height: 1.2; font-weight: 600; }
-.level-control { display: flex; padding: 3px; border: 1px solid #e5e2d7; border-radius: 7px; background: #f8f5eb; }
-.level-control button { border: 0; min-height: 40px; padding: 6px 12px; border-radius: 5px; color: #7a8178; background: transparent; text-transform: capitalize; font-size: 11px; font-weight: 700; cursor: pointer; }
-.level-control button.active { color: white; background: var(--forest); box-shadow: 0 2px 6px rgba(36, 92, 67, .18); }
 .operation-control { display: flex; align-items: center; gap: 14px; padding: 12px 0 15px; border-top: 1px solid #eee9dc; border-bottom: 1px solid #eee9dc; }
+.test-mode-note {
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border: 1px dashed #d8d7ca;
+  border-radius: 6px;
+  color: #667267;
+  background: #f8f6ee;
+  font-size: 12px;
+}
+
+.test-mode-note strong {
+  color: var(--forest-deep);
+}
 .control-label { flex: 0 0 auto; color: #92958a; font-size: 9px; letter-spacing: 1px; }
 .operation-list { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
 .operation-list button { min-width: 0; min-height: 40px; padding: 6px 4px; border: 1px solid #e8e6db; border-radius: 5px; background: #fffdf7; color: #69756a; font-size: 11px; font-weight: 700; cursor: pointer; transition: background .16s, color .16s, border-color .16s; }
@@ -114,7 +152,6 @@ h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia,
 .next-button { background: var(--caramel); }
 .next-button:hover { background: #a76637; }
 .operation-list button:focus-visible,
-.level-control button:focus-visible,
 .answer-option:focus-visible,
 .check-button:focus-visible {
   outline: 3px solid #e29a48;
@@ -170,8 +207,8 @@ h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia,
   .speech-bubble p { font-size: 16px; }
   .check-button,
   .operation-list button,
-  .level-control button,
   .answer-option { min-height: 48px; font-size: 13px; }
+  .session-select { min-height: 48px; font-size: 13px; }
   .truth-table th { font-size: 10px; }
   .truth-table td { height: 62px; }
   .feedback { font-size: 13px; }
@@ -188,8 +225,8 @@ h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia,
   .guide-panel { min-height: 620px; }
   .check-button,
   .operation-list button,
-  .level-control button,
   .answer-option { min-height: 56px; font-size: 15px; }
+  .session-select { min-height: 56px; font-size: 15px; }
   .truth-table th { height: 44px; }
   .truth-table td { height: 72px; }
 }
@@ -201,12 +238,13 @@ h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia,
     margin-bottom: 14px;
   }
 
-  .level-control {
+  .session-controls {
     width: 100%;
+    align-items: stretch;
   }
 
-  .level-control button {
-    flex: 1;
+  .session-field {
+    width: 100%;
   }
 
   .operation-control {
@@ -271,7 +309,8 @@ h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia,
   .puzzle-panel { padding: 20px 14px 16px; }
   .puzzle-heading { align-items: flex-start; }
   h2 { max-width: 200px; font-size: 20px; }
-  .level-control { flex-shrink: 0; }
+  .session-controls { align-items: flex-start; }
+  .session-field { min-width: 0; }
   .operation-control { flex-direction: row; align-items: center; gap: 8px; }
   .control-label { width: 68px; font-size: 8px; }
   .operation-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }

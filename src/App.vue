@@ -3,66 +3,109 @@ import { computed, ref, watch } from 'vue'
 import BoolioMascot from './components/BoolioMascot.vue'
 import OperationSelector from './components/OperationSelector.vue'
 import TruthTable from './components/TruthTable.vue'
+import { logicOperations } from './logic/gates'
 import { generateQuestion } from './logic/questionGenerator'
 import { awardCorrectAnswer } from './logic/scoring'
-import type { Difficulty, Exercise, GameScore, LogicOperation } from './types/game'
+import type { Difficulty, Exercise, GameMode, GameScore, LogicOperation, ScoreByMode } from './types/game'
 
 const correctMessages = [
   'Amazing thinking! You got it!',
   'Great work! Boolio is so proud of you!',
   'You cracked the puzzle. High five!',
 ]
+const modes: GameMode[] = ['practice', 'test']
 const difficulties: Difficulty[] = ['easy', 'medium']
+const modeLabels: Record<GameMode, string> = {
+  practice: 'Practice',
+  test: 'Test',
+}
+const difficultyLabels: Record<Difficulty, string> = {
+  easy: 'Easy',
+  medium: 'Medium',
+}
 
+const mode = ref<GameMode>('practice')
 const operation = ref<LogicOperation>('AND')
 const difficulty = ref<Difficulty>('easy')
-const score = ref<GameScore>(loadScore())
-const exercise = ref<Exercise>(generateQuestion(operation.value, difficulty.value))
+const scores = ref<ScoreByMode>(loadScores())
+const exercise = ref<Exercise>(generateQuestion(nextOperation(mode.value), difficulty.value))
 const answers = ref<Record<string, boolean>>({})
-const feedback = ref('Pick TRUE or FALSE for each empty box.')
+const feedback = ref('Pick TRUE or FALSE for each output box.')
 const isCorrect = ref(false)
+const activeScore = computed(() => scores.value[mode.value])
 const allAnswered = computed(() =>
   exercise.value.missingRowIds.every((rowId) => answers.value[rowId] !== undefined),
 )
 
-watch(score, (newScore) => {
+watch(scores, (newScores) => {
   try {
-    localStorage.setItem('boolio-score', JSON.stringify(newScore))
+    localStorage.setItem('boolio-scores', JSON.stringify(newScores))
   } catch {
     // The game still works if browser storage is unavailable.
   }
 }, { deep: true })
 
-watch([operation, difficulty], () => startNextQuestion())
+watch([mode, operation, difficulty], ([nextMode, nextOperation, nextDifficulty], [prevMode, prevOperation, prevDifficulty]) => {
+  if (nextMode !== prevMode || nextDifficulty !== prevDifficulty) {
+    startNextQuestion()
+    return
+  }
 
-function loadScore(): GameScore {
+  if (nextMode === 'practice' && nextOperation !== prevOperation) {
+    startNextQuestion()
+  }
+})
+
+function loadScores(): ScoreByMode {
+  const emptyScore: GameScore = { points: 0, stars: 0 }
   try {
-    const saved = localStorage.getItem('boolio-score')
-    if (saved) {
-      const parsed: unknown = JSON.parse(saved)
-      if (
-        typeof parsed === 'object' && parsed !== null &&
-        'points' in parsed && typeof parsed.points === 'number' &&
-        'stars' in parsed && typeof parsed.stars === 'number'
-      ) {
-        return { points: parsed.points, stars: parsed.stars }
+    const savedScores = localStorage.getItem('boolio-scores')
+    if (savedScores) {
+      const parsed: unknown = JSON.parse(savedScores)
+      if (typeof parsed === 'object' && parsed !== null && 'practice' in parsed && 'test' in parsed) {
+        const practice = (parsed as { practice: unknown }).practice
+        const test = (parsed as { test: unknown }).test
+        if (isGameScore(practice) && isGameScore(test)) {
+          return { practice, test }
+        }
+      }
+    }
+
+    const legacyScore = localStorage.getItem('boolio-score')
+    if (legacyScore) {
+      const parsedLegacy: unknown = JSON.parse(legacyScore)
+      if (isGameScore(parsedLegacy)) {
+        return { practice: parsedLegacy, test: emptyScore }
       }
     }
   } catch {
     // Ignore invalid or unavailable local storage.
   }
-  return { points: 0, stars: 0 }
+  return { practice: emptyScore, test: emptyScore }
+}
+
+function isGameScore(value: unknown): value is GameScore {
+  return typeof value === 'object' && value !== null
+    && 'points' in value && typeof value.points === 'number'
+    && 'stars' in value && typeof value.stars === 'number'
+}
+
+function nextOperation(currentMode: GameMode) {
+  if (currentMode === 'practice') return operation.value
+  const index = Math.floor(Math.random() * logicOperations.length)
+  return logicOperations[index] ?? 'AND'
 }
 
 function startNextQuestion() {
+  const questionOperation = nextOperation(mode.value)
   exercise.value = generateQuestion(
-    operation.value,
+    questionOperation,
     difficulty.value,
     exercise.value?.id,
   )
   answers.value = {}
   isCorrect.value = false
-  feedback.value = 'Pick TRUE or FALSE for each empty box.'
+  feedback.value = 'Pick TRUE or FALSE for each output box.'
 }
 
 function selectAnswer(rowId: string, value: boolean) {
@@ -78,13 +121,16 @@ function checkAnswers() {
   )
 
   if (correct) {
-    score.value = awardCorrectAnswer(score.value)
+    scores.value = {
+      ...scores.value,
+      [mode.value]: awardCorrectAnswer(scores.value[mode.value]),
+    }
     isCorrect.value = true
     feedback.value = correctMessages[Math.floor(Math.random() * correctMessages.length)] ?? correctMessages[0]!
     return
   }
 
-  feedback.value = `Almost! ${operationHint(operation.value)}`
+  feedback.value = `Almost! ${operationHint(exercise.value.operation)}`
 }
 
 function operationHint(selectedOperation: LogicOperation) {
@@ -104,16 +150,16 @@ function operationHint(selectedOperation: LogicOperation) {
         <img src="/boolio.svg" alt="" class="brand-mascot" />
         <span>boolio<span class="brand-period">.</span></span>
       </a>
-      <div class="score-strip" aria-label="Your session score">
+      <div class="score-strip" :aria-label="`${mode} mode score`">
         <div class="score-item">
           <span class="score-icon points-icon" aria-hidden="true">✦</span>
-          <span class="score-number">{{ score.points }}</span>
+          <span class="score-number">{{ activeScore.points }}</span>
           <span class="score-label">points</span>
         </div>
         <span class="score-divider" aria-hidden="true"></span>
         <div class="score-item">
           <span class="score-icon star-icon" aria-hidden="true">★</span>
-          <span class="score-number">{{ score.stars }}</span>
+          <span class="score-number">{{ activeScore.stars }}</span>
           <span class="score-label">stars</span>
         </div>
       </div>
@@ -140,35 +186,44 @@ function operationHint(selectedOperation: LogicOperation) {
               <p class="section-kicker">TODAY'S PUZZLE</p>
               <h2>Complete the truth table</h2>
             </div>
-            <div class="level-control" aria-label="Choose difficulty">
-              <button
-                v-for="level in difficulties"
-                :key="level"
-                type="button"
-                :aria-pressed="difficulty === level"
-                :class="{ active: difficulty === level }"
-                @click="difficulty = level"
-              >
-                {{ level }}
-              </button>
+            <div class="session-controls">
+              <label class="session-field" for="mode-select">
+                <span class="session-label">Game mode</span>
+                <select id="mode-select" v-model="mode" class="session-select" aria-label="Choose game mode">
+                  <option v-for="value in modes" :key="value" :value="value">
+                    {{ modeLabels[value] }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="session-field" for="difficulty-select">
+                <span class="session-label">Difficulty</span>
+                <select id="difficulty-select" v-model="difficulty" class="session-select" aria-label="Choose difficulty">
+                  <option v-for="level in difficulties" :key="level" :value="level">
+                    {{ difficultyLabels[level] }}
+                  </option>
+                </select>
+              </label>
             </div>
           </div>
 
-          <OperationSelector v-model="operation" />
+          <OperationSelector v-if="mode === 'practice'" v-model="operation" />
+          <div v-else class="test-mode-note" aria-live="polite">
+            Test mode picks a random gate every puzzle. Current gate: <strong>{{ exercise.operation }}</strong>
+          </div>
 
           <div class="rule-line">
             <span class="rule-icon" aria-hidden="true">?</span>
-            <p v-if="operation === 'AND'">AND is true only when <strong>both</strong> are true.</p>
-            <p v-else-if="operation === 'OR'">OR is true when <strong>at least one</strong> is true.</p>
-            <p v-else-if="operation === 'NOT'">NOT <strong>flips</strong> the answer around.</p>
+            <p v-if="exercise.operation === 'AND'">AND is true only when <strong>both</strong> are true.</p>
+            <p v-else-if="exercise.operation === 'OR'">OR is true when <strong>at least one</strong> is true.</p>
+            <p v-else-if="exercise.operation === 'NOT'">NOT <strong>flips</strong> the answer around.</p>
             <p v-else>XOR is true when the answers are <strong>different</strong>.</p>
           </div>
 
           <div class="table-scroll">
             <TruthTable
-              :operation="operation"
+              :operation="exercise.operation"
               :rows="exercise.rows"
-              :missing-row-ids="exercise.missingRowIds"
               :answers="answers"
               :locked="isCorrect"
               @select="selectAnswer"

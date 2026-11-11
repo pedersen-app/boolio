@@ -19,15 +19,13 @@ function makeExercise(
 ): Exercise {
   const truthTable = createTruthTable(operation)
   const visibleOrder = difficulty === 'medium' ? shuffle(truthTable, random) : truthTable
-  const missingCount = difficulty === 'easy' ? 1 : Math.min(2, truthTable.length)
-  const missingRowIds = shuffle(visibleOrder.map((row) => row.id), random).slice(0, missingCount)
-  const missing = new Set(missingRowIds)
+  const missingRowIds = visibleOrder.map((row) => row.id)
   const answerKey = Object.fromEntries(
     truthTable.map((row) => [row.id, row.output === true]),
   )
   const rows: TruthTableRow[] = visibleOrder.map((row) => ({
     ...row,
-    output: missing.has(row.id) ? null : row.output,
+    output: null,
   }))
 
   return {
