@@ -14,7 +14,7 @@ const correctMessages = [
   'You cracked the puzzle. High five!',
 ]
 const modes: GameMode[] = ['practice', 'test']
-const difficulties: Difficulty[] = ['easy', 'medium']
+const difficulties: Difficulty[] = ['easy', 'medium', 'hard', 'advanced', 'expert']
 const modeLabels: Record<GameMode, string> = {
   practice: 'Practice',
   test: 'Test',
@@ -22,6 +22,9 @@ const modeLabels: Record<GameMode, string> = {
 const difficultyLabels: Record<Difficulty, string> = {
   easy: 'Easy',
   medium: 'Medium',
+  hard: 'Hard',
+  advanced: 'Advanced',
+  expert: 'Expert',
 }
 
 const mode = ref<GameMode>('practice')
@@ -130,16 +133,7 @@ function checkAnswers() {
     return
   }
 
-  feedback.value = `Almost! ${operationHint(exercise.value.operation)}`
-}
-
-function operationHint(selectedOperation: LogicOperation) {
-  switch (selectedOperation) {
-    case 'AND': return 'AND is true only when both answers are true. Have another go!'
-    case 'OR': return 'OR is true when at least one answer is true. Have another go!'
-    case 'NOT': return 'NOT flips the answer: true becomes false. Have another go!'
-    case 'XOR': return 'XOR is true when the answers are different. Have another go!'
-  }
+  feedback.value = `Almost! ${exercise.value.ruleText} Have another go!`
 }
 </script>
 
@@ -214,15 +208,12 @@ function operationHint(selectedOperation: LogicOperation) {
 
           <div class="rule-line">
             <span class="rule-icon" aria-hidden="true">?</span>
-            <p v-if="exercise.operation === 'AND'">AND is true only when <strong>both</strong> are true.</p>
-            <p v-else-if="exercise.operation === 'OR'">OR is true when <strong>at least one</strong> is true.</p>
-            <p v-else-if="exercise.operation === 'NOT'">NOT <strong>flips</strong> the answer around.</p>
-            <p v-else>XOR is true when the answers are <strong>different</strong>.</p>
+            <p>{{ exercise.ruleText }}</p>
           </div>
 
           <div class="table-scroll">
             <TruthTable
-              :operation="exercise.operation"
+              :input-labels="exercise.inputLabels"
               :rows="exercise.rows"
               :answers="answers"
               :locked="isCorrect"

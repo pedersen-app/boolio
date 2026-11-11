@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { LogicOperation, TruthTableRow } from '../types/game'
+import { computed } from 'vue'
+import type { TruthTableRow } from '../types/game'
 
-defineProps<{
-  operation: LogicOperation
+const props = defineProps<{
+  inputLabels: string[]
   rows: TruthTableRow[]
   answers: Record<string, boolean>
   locked: boolean
@@ -15,21 +16,26 @@ const emit = defineEmits<{
 function truthLabel(value: boolean) {
   return value ? 'TRUE' : 'FALSE'
 }
+
+const tableMinWidth = computed(() => {
+  const base = 150 + (props.inputLabels.length * 88)
+  return `${Math.max(440, base)}px`
+})
 </script>
 
 <template>
-  <table class="truth-table" :class="{ 'not-table': operation === 'NOT' }">
+  <table class="truth-table" :style="{ minWidth: tableMinWidth }">
     <thead>
       <tr>
-        <th scope="col">A</th>
-        <th v-if="operation !== 'NOT'" scope="col">B</th>
-        <th scope="col">OUTPUT</th>
+        <th v-for="label in inputLabels" :key="label" scope="col">{{ label }}</th>
+        <th scope="col" class="output-heading">OUTPUT</th>
       </tr>
     </thead>
     <tbody>
       <tr v-for="(row, index) in rows" :key="row.id">
-        <td><span class="truth-value" :class="{ true: row.inputs[0] }">{{ truthLabel(row.inputs[0]!) }}</span></td>
-        <td v-if="operation !== 'NOT'"><span class="truth-value" :class="{ true: row.inputs[1] }">{{ truthLabel(row.inputs[1]!) }}</span></td>
+        <td v-for="(value, inputIndex) in row.inputs" :key="`${row.id}:${inputIndex}`">
+          <span class="truth-value" :class="{ true: value }">{{ truthLabel(value) }}</span>
+        </td>
         <td class="output-cell">
           <div class="answer-options" role="group" :aria-label="`Answer for row ${index + 1}`">
             <button

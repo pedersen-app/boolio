@@ -35,6 +35,7 @@ describe('question generation', () => {
     expect(exercise.missingRowIds).toHaveLength(exercise.rows.length)
     expect(exercise.rows.filter((row) => row.output === null)).toHaveLength(exercise.rows.length)
     expect(Object.keys(exercise.answerKey)).toHaveLength(4)
+    expect(exercise.inputLabels).toEqual(['A', 'B'])
   })
 
   it('requires answers for every medium row and keeps every generated answer correct', () => {
@@ -42,6 +43,56 @@ describe('question generation', () => {
     expect(exercise.missingRowIds).toHaveLength(exercise.rows.length)
     for (const row of exercise.rows) {
       const expected = row.inputs[0] !== row.inputs[1]
+      expect(exercise.answerKey[row.id]).toBe(expected)
+    }
+  })
+
+  it('uses three inputs for hard difficulty gates', () => {
+    const exercise = generateQuestion('OR', 'hard', undefined, () => 0)
+    expect(exercise.rows).toHaveLength(8)
+    expect(exercise.inputLabels).toEqual(['A', 'B', 'C'])
+    for (const row of exercise.rows) {
+      const expected = row.inputs.some((value) => value === true)
+      expect(exercise.answerKey[row.id]).toBe(expected)
+    }
+  })
+
+  it('uses four inputs for advanced binary gates', () => {
+    const exercise = generateQuestion('AND', 'advanced', undefined, () => 0)
+    expect(exercise.rows).toHaveLength(16)
+    expect(exercise.inputLabels).toEqual(['A', 'B', 'C', 'D'])
+    for (const row of exercise.rows) {
+      const expected = row.inputs.every((value) => value === true)
+      expect(exercise.answerKey[row.id]).toBe(expected)
+    }
+  })
+
+  it('uses composite NOT behavior for advanced difficulty', () => {
+    const exercise = generateQuestion('NOT', 'advanced', undefined, () => 0)
+    expect(exercise.rows).toHaveLength(8)
+    expect(exercise.inputLabels).toEqual(['A', 'B', 'C'])
+    for (const row of exercise.rows) {
+      const expected = !((row.inputs[0] === true || row.inputs[1] === true) && row.inputs[2] === true)
+      expect(exercise.answerKey[row.id]).toBe(expected)
+    }
+  })
+
+  it('uses five inputs for expert binary gates', () => {
+    const exercise = generateQuestion('OR', 'expert', undefined, () => 0)
+    expect(exercise.rows).toHaveLength(32)
+    expect(exercise.inputLabels).toEqual(['A', 'B', 'C', 'D', 'E'])
+    for (const row of exercise.rows) {
+      const expected = row.inputs.some((value) => value === true)
+      expect(exercise.answerKey[row.id]).toBe(expected)
+    }
+  })
+
+  it('uses expert NOT behavior for expert difficulty', () => {
+    const exercise = generateQuestion('NOT', 'expert', undefined, () => 0)
+    expect(exercise.rows).toHaveLength(16)
+    expect(exercise.inputLabels).toEqual(['A', 'B', 'C', 'D'])
+    for (const row of exercise.rows) {
+      const expected = !((row.inputs[0] !== row.inputs[1]) || (row.inputs[2] === true && row.inputs[3] === true))
       expect(exercise.answerKey[row.id]).toBe(expected)
     }
   })

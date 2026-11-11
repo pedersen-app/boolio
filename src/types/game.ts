@@ -1,6 +1,6 @@
 export type LogicOperation = 'AND' | 'OR' | 'NOT' | 'XOR'
 
-export type Difficulty = 'easy' | 'medium'
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'advanced' | 'expert'
 
 export type GameMode = 'practice' | 'test'
 
@@ -14,6 +14,8 @@ export interface Exercise {
   id: string
   operation: LogicOperation
   difficulty: Difficulty
+  inputLabels: string[]
+  ruleText: string
   rows: TruthTableRow[]
   missingRowIds: string[]
   answerKey: Record<string, boolean>
