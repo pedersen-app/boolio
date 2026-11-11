@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import BoolioMascot from './components/BoolioMascot.vue'
 import TruthTable from './components/TruthTable.vue'
+import boolioAsset from './assets/boolio.svg'
 import { generateQuestion } from './logic/questionGenerator'
 import { awardCorrectAnswer } from './logic/scoring'
 import type { Difficulty, Exercise, GameMode, GameScore, InferenceRule, LogicOperation, ScoreByMode } from './types/game'
@@ -41,6 +42,7 @@ const operationsByInferenceRuleAndDifficulty: Record<InferenceRule, Record<Diffi
 const mode = ref<GameMode>('practice')
 const difficulty = ref<Difficulty>('easy')
 const inferenceRule = ref<InferenceRule>('conjunction')
+const isTestStarted = ref(false)
 const scores = ref<ScoreByMode>(loadScores())
 const exercise = ref<Exercise>(generateQuestion(nextOperation(mode.value), difficulty.value))
 const answers = ref<Record<string, boolean>>({})
@@ -49,6 +51,9 @@ const isCorrect = ref(false)
 const activeScore = computed(() => scores.value[mode.value])
 const allAnswered = computed(() =>
   exercise.value.missingRowIds.every((rowId) => answers.value[rowId] !== undefined),
+)
+const isInteractionLocked = computed(() =>
+  isCorrect.value || (mode.value === 'test' && !isTestStarted.value),
 )
 
 watch(scores, (newScores) => {
@@ -60,8 +65,28 @@ watch(scores, (newScores) => {
 }, { deep: true })
 
 watch([mode, difficulty, inferenceRule], ([nextMode, nextDifficulty, nextInferenceRule], [prevMode, prevDifficulty, prevInferenceRule]) => {
-  if (nextMode !== prevMode || nextDifficulty !== prevDifficulty || nextInferenceRule !== prevInferenceRule) {
+  if (nextMode !== prevMode) {
+    if (nextMode === 'test') {
+      isTestStarted.value = false
+      resetRound('Press Start to begin test mode.')
+      return
+    }
+
+    isTestStarted.value = false
     startNextQuestion()
+    return
+  }
+
+  if (nextMode === 'practice') {
+    if (nextDifficulty !== prevDifficulty || nextInferenceRule !== prevInferenceRule) {
+      startNextQuestion()
+    }
+    return
+  }
+
+  if (nextDifficulty !== prevDifficulty) {
+    isTestStarted.value = false
+    resetRound('Difficulty updated. Press Start to begin test mode.')
   }
 })
 
@@ -103,6 +128,10 @@ function allowedOperations(currentInferenceRule: InferenceRule, currentDifficult
   return operationsByInferenceRuleAndDifficulty[currentInferenceRule][currentDifficulty] ?? ['AND']
 }
 
+function availableInferenceRulesForDifficulty(currentDifficulty: Difficulty): InferenceRule[] {
+  return inferenceRules.filter((rule) => allowedOperations(rule, currentDifficulty).length > 0)
+}
+
 function nextOperation(currentMode: GameMode) {
   const availableOperations = allowedOperations(inferenceRule.value, difficulty.value)
   const fallbackOperation = availableOperations[0] ?? 'AND'
@@ -113,6 +142,12 @@ function nextOperation(currentMode: GameMode) {
   return availableOperations[index] ?? fallbackOperation
 }
 
+function resetRound(message: string) {
+  answers.value = {}
+  isCorrect.value = false
+  feedback.value = message
+}
+
 function startNextQuestion() {
   const questionOperation = nextOperation(mode.value)
   exercise.value = generateQuestion(
@@ -120,19 +155,25 @@ function startNextQuestion() {
     difficulty.value,
     exercise.value?.id,
   )
-  answers.value = {}
-  isCorrect.value = false
-  feedback.value = 'Pick TRUE or FALSE for each output box.'
+  resetRound('Pick TRUE or FALSE for each output box.')
+}
+
+function startTestRound() {
+  const availableRules = availableInferenceRulesForDifficulty(difficulty.value)
+  const index = Math.floor(Math.random() * availableRules.length)
+  inferenceRule.value = availableRules[index] ?? 'conjunction'
+  isTestStarted.value = true
+  startNextQuestion()
 }
 
 function selectAnswer(rowId: string, value: boolean) {
-  if (isCorrect.value) return
+  if (isInteractionLocked.value) return
   answers.value = { ...answers.value, [rowId]: value }
   feedback.value = 'You can change your answers before checking.'
 }
 
 function checkAnswers() {
-  if (!allAnswered.value || isCorrect.value) return
+  if (isInteractionLocked.value || !allAnswered.value) return
   const correct = exercise.value.missingRowIds.every(
     (rowId) => answers.value[rowId] === exercise.value.answerKey[rowId],
   )
@@ -155,7 +196,7 @@ function checkAnswers() {
   <div class="app-shell min-h-screen">
     <header class="topbar">
       <a class="brand" href="#top" aria-label="Boolio home">
-        <img src="/boolio.svg" alt="" class="brand-mascot" />
+        <img :src="boolioAsset" alt="" class="brand-mascot" />
         <span>boolio<span class="brand-period">.</span></span>
       </a>
       <div class="score-strip" :aria-label="`${mode} mode score`">
@@ -188,7 +229,8 @@ function checkAnswers() {
       </section>
 
       <section class="play-layout" aria-label="Boolean logic puzzle">
-        <div class="puzzle-panel">
+        <div class="play-top-row">
+          <div class="puzzle-panel puzzle-panel-top">
           <div class="puzzle-heading">
             <div>
               <p class="section-kicker">TODAY'S PUZZLE</p>
@@ -213,7 +255,7 @@ function checkAnswers() {
                 </select>
               </label>
 
-              <label class="session-field" for="inference-rule-select">
+              <label v-if="mode === 'practice'" class="session-field" for="inference-rule-select">
                 <span class="session-label">Inference rule</span>
                 <select id="inference-rule-select" v-model="inferenceRule" class="session-select" aria-label="Choose inference rule">
                   <option v-for="rule in inferenceRules" :key="rule" :value="rule">
@@ -221,29 +263,52 @@ function checkAnswers() {
                   </option>
                 </select>
               </label>
+              <div v-else class="session-field">
+                <span class="session-label">Test round</span>
+                <button type="button" class="session-start-button" @click="startTestRound">Start</button>
+              </div>
             </div>
           </div>
 
           <div class="test-mode-note" aria-live="polite">
             <template v-if="mode === 'practice'">
-              Practice mode uses the selected inference rule. Current gate: <strong>{{ exercise.operation }}</strong>
+              Practice mode uses the selected inference rule. Current inference rule: <strong>{{ inferenceRuleLabels[inferenceRule] }}</strong>
+            </template>
+            <template v-else-if="!isTestStarted">
+              Press Start to choose an inference rule for this difficulty and begin your test round.
             </template>
             <template v-else>
-              Test mode picks a random gate from your inference rule and difficulty. Current gate: <strong>{{ exercise.operation }}</strong>
+              Test mode selected an inference rule for this difficulty. Current inference rule: <strong>{{ inferenceRuleLabels[inferenceRule] }}</strong>
             </template>
           </div>
 
-          <div class="rule-line">
+          <div v-if="mode === 'practice' || isTestStarted" class="rule-line">
             <span class="rule-icon" aria-hidden="true">?</span>
             <p>{{ exercise.ruleText }}</p>
           </div>
+          </div>
 
-          <div class="table-scroll">
+          <aside class="guide-panel" aria-label="Boolio's encouragement">
+            <div class="guide-topline"><span class="guide-dot"></span> YOUR PUZZLE PAL</div>
+            <BoolioMascot :mood="isCorrect ? 'cheering' : feedback.startsWith('Almost') ? 'encouraging' : 'thinking'" />
+            <div class="speech-bubble" aria-live="polite">
+              <span class="speech-tail" aria-hidden="true"></span>
+              <p>{{ isCorrect ? 'That was some sharp thinking!' : feedback.startsWith('Almost') ? 'Mistakes help our brains grow. Try again!' : 'Let’s think it through together!' }}</p>
+            </div>
+            <div class="guide-bottom">
+              <span class="guide-leaf" aria-hidden="true">✳</span>
+              <p>Every great builder starts with one good idea.</p>
+            </div>
+          </aside>
+        </div>
+
+        <div class="puzzle-panel puzzle-panel-bottom">
+          <div v-if="mode === 'practice' || isTestStarted" class="table-scroll">
             <TruthTable
               :input-labels="exercise.inputLabels"
               :rows="exercise.rows"
               :answers="answers"
-              :locked="isCorrect"
+              :locked="isInteractionLocked"
               @select="selectAnswer"
             />
           </div>
@@ -253,12 +318,12 @@ function checkAnswers() {
               <span class="feedback-mark" aria-hidden="true">{{ isCorrect ? '✦' : '•' }}</span>
               {{ feedback }}
             </p>
-            <div class="action-row">
+            <div v-if="mode === 'practice' || isTestStarted" class="action-row">
               <button
                 v-if="!isCorrect"
                 class="check-button transition-colors duration-150"
                 type="button"
-                :disabled="!allAnswered"
+                :disabled="!allAnswered || isInteractionLocked"
                 @click="checkAnswers"
               >
                 Check answers <span aria-hidden="true">↗</span>
@@ -267,26 +332,13 @@ function checkAnswers() {
                 v-else
                 class="check-button next-button transition-colors duration-150"
                 type="button"
-                @click="startNextQuestion"
+                @click="mode === 'test' ? startTestRound() : startNextQuestion()"
               >
                 Next puzzle <span aria-hidden="true">→</span>
               </button>
             </div>
           </div>
         </div>
-
-        <aside class="guide-panel" aria-label="Boolio's encouragement">
-          <div class="guide-topline"><span class="guide-dot"></span> YOUR PUZZLE PAL</div>
-          <BoolioMascot :mood="isCorrect ? 'cheering' : feedback.startsWith('Almost') ? 'encouraging' : 'thinking'" />
-          <div class="speech-bubble" aria-live="polite">
-            <span class="speech-tail" aria-hidden="true"></span>
-            <p>{{ isCorrect ? 'That was some sharp thinking!' : feedback.startsWith('Almost') ? 'Mistakes help our brains grow. Try again!' : 'Let’s think it through together!' }}</p>
-          </div>
-          <div class="guide-bottom">
-            <span class="guide-leaf" aria-hidden="true">✳</span>
-            <p>Every great builder starts with one good idea.</p>
-          </div>
-        </aside>
       </section>
 
       <footer class="page-footer">
