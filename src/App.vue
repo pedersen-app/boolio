@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import BoolioMascot from './components/BoolioMascot.vue'
-import TruthTable from './components/TruthTable.vue'
+import InferenceRuleTruthTable from './components/inference-rules/InferenceRuleTruthTable.vue'
 import boolioAsset from './assets/boolio.svg'
 import { generateQuestion } from './logic/questionGenerator'
 import { awardCorrectAnswer } from './logic/scoring'
@@ -16,7 +16,7 @@ const correctMessages = [
 ]
 const modes: GameMode[] = ['practice', 'test']
 const difficulties: Difficulty[] = ['easy', 'medium', 'hard', 'advanced', 'expert']
-const inferenceRules: InferenceRule[] = ['conjunction']
+const inferenceRules: InferenceRule[] = ['conjunction', 'disjunction']
 const modeLabels: Record<GameMode, string> = {
   practice: 'Practice',
   test: 'Test',
@@ -30,6 +30,7 @@ const difficultyLabels: Record<Difficulty, string> = {
 }
 const inferenceRuleLabels: Record<InferenceRule, string> = {
   conjunction: 'Conjunction (AND)',
+  disjunction: 'Disjunction (OR)',
 }
 const notationModes: NotationMode[] = ['symbolic', 'polish', 'reversePolish']
 const notationModeLabels: Record<NotationMode, string> = {
@@ -37,13 +38,20 @@ const notationModeLabels: Record<NotationMode, string> = {
   polish: 'Polish',
   reversePolish: 'Reverse Polish',
 }
-const operationsByInferenceRuleAndDifficulty: Record<InferenceRule, Record<Difficulty, LogicOperation[]>> = {
+const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, LogicOperation[]>> = {
   conjunction: {
     easy: ['AND'],
     medium: ['AND'],
     hard: ['AND'],
     advanced: ['AND'],
     expert: ['AND'],
+  },
+  disjunction: {
+    easy: ['OR'],
+    medium: ['OR'],
+    hard: ['OR'],
+    advanced: ['OR'],
+    expert: ['OR'],
   },
 }
 
@@ -53,7 +61,7 @@ const inferenceRule = ref<InferenceRule>('conjunction')
 const notationMode = ref<NotationMode>('polish')
 const isTestStarted = ref(false)
 const scores = ref<ScoreByMode>(loadScores())
-const exercise = ref<Exercise>(generateQuestion(nextOperation(mode.value), difficulty.value))
+const exercise = ref<Exercise>(generateQuestion(nextRuleOperation(mode.value), difficulty.value))
 const answers = ref<Record<string, boolean>>({})
 const feedback = ref('Pick TRUE or FALSE for each output box.')
 const isCorrect = ref(false)
@@ -133,22 +141,22 @@ function isGameScore(value: unknown): value is GameScore {
     && 'stars' in value && typeof value.stars === 'number'
 }
 
-function allowedOperations(currentInferenceRule: InferenceRule, currentDifficulty: Difficulty): LogicOperation[] {
-  return operationsByInferenceRuleAndDifficulty[currentInferenceRule][currentDifficulty] ?? ['AND']
+function allowedRuleOperations(currentInferenceRule: InferenceRule, currentDifficulty: Difficulty): LogicOperation[] {
+  return ruleOperationsByDifficulty[currentInferenceRule][currentDifficulty] ?? ['AND']
 }
 
 function availableInferenceRulesForDifficulty(currentDifficulty: Difficulty): InferenceRule[] {
-  return inferenceRules.filter((rule) => allowedOperations(rule, currentDifficulty).length > 0)
+  return inferenceRules.filter((rule) => allowedRuleOperations(rule, currentDifficulty).length > 0)
 }
 
-function nextOperation(currentMode: GameMode) {
-  const availableOperations = allowedOperations(inferenceRule.value, difficulty.value)
-  const fallbackOperation = availableOperations[0] ?? 'AND'
+function nextRuleOperation(currentMode: GameMode) {
+  const availableRuleOperations = allowedRuleOperations(inferenceRule.value, difficulty.value)
+  const fallbackOperation = availableRuleOperations[0] ?? 'AND'
 
   if (currentMode === 'practice') return fallbackOperation
 
-  const index = Math.floor(Math.random() * availableOperations.length)
-  return availableOperations[index] ?? fallbackOperation
+  const index = Math.floor(Math.random() * availableRuleOperations.length)
+  return availableRuleOperations[index] ?? fallbackOperation
 }
 
 function resetRound(message: string) {
@@ -158,7 +166,7 @@ function resetRound(message: string) {
 }
 
 function startNextQuestion() {
-  const questionOperation = nextOperation(mode.value)
+  const questionOperation = nextRuleOperation(mode.value)
   exercise.value = generateQuestion(
     questionOperation,
     difficulty.value,
@@ -331,8 +339,8 @@ function checkAnswers() {
 
         <div class="puzzle-panel puzzle-panel-bottom">
           <div v-if="mode === 'practice' || isTestStarted" class="table-scroll">
-            <TruthTable
-              :operation="exercise.operation"
+            <InferenceRuleTruthTable
+              :inference-rule="inferenceRule"
               :notation-mode="notationMode"
               :input-labels="exercise.inputLabels"
               :rows="exercise.rows"

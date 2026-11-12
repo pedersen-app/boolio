@@ -1,22 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { LogicOperation, TruthTableRow } from '../types/game'
+import { computed, ref } from 'vue'
+import type { BaseInferenceRuleTableProps } from './types'
 
-type NotationMode = 'symbolic' | 'polish' | 'reversePolish'
 type ColumnSpec = { kind: 'input'; inputIndex: number } | { kind: 'operator' }
 
-const props = defineProps<{
-  operation: LogicOperation
-  notationMode: NotationMode
-  inputLabels: string[]
-  rows: TruthTableRow[]
-  answers: Record<string, boolean>
-  locked: boolean
-}>()
+const props = defineProps<BaseInferenceRuleTableProps>()
 
 const emit = defineEmits<{
   select: [rowId: string, answer: boolean]
 }>()
+
+const tooltipVisible = ref(false)
+const tooltipDirection = ref<'above' | 'below'>('above')
+const tooltipStyle = ref<Record<string, string>>({ left: '0px', top: '0px' })
 
 function truthLabel(value: boolean) {
   return value ? 'TRUE' : 'FALSE'
@@ -29,16 +25,43 @@ const tableMinWidth = computed(() => {
   return `${Math.max(440, base)}px`
 })
 
-const operatorToken = computed(() => {
-  const logicSymbolByOperation: Record<LogicOperation, string> = {
-    AND: '∧',
-    OR: '∨',
-    XOR: '⊕',
-    NOT: '¬',
+const operatorTooltip = computed(() => {
+  const tooltipByOperation: Record<BaseInferenceRuleTableProps['operation'], string> = {
+    AND: 'AND (conjunction): true only when all inputs are true.',
+    OR: 'OR (disjunction): true when at least one input is true.',
+    NOT: 'NOT (negation): flips true and false.',
+    XOR: 'XOR (exclusive OR): true when inputs are different.',
   }
 
-  return logicSymbolByOperation[props.operation]
+  return tooltipByOperation[props.operation]
 })
+
+function showOperatorTooltip(event: MouseEvent | FocusEvent) {
+  const target = event.currentTarget as HTMLElement | null
+  if (!target) return
+
+  const rect = target.getBoundingClientRect()
+  const tooltipHalfWidth = 130
+  const edgePadding = 12
+  const centerX = rect.left + (rect.width / 2)
+  const clampedX = Math.max(
+    edgePadding + tooltipHalfWidth,
+    Math.min(window.innerWidth - edgePadding - tooltipHalfWidth, centerX),
+  )
+
+  tooltipDirection.value = rect.top < 96 ? 'below' : 'above'
+  tooltipStyle.value = {
+    left: `${clampedX}px`,
+    top: tooltipDirection.value === 'above'
+      ? `${rect.top}px`
+      : `${rect.bottom}px`,
+  }
+  tooltipVisible.value = true
+}
+
+function hideOperatorTooltip() {
+  tooltipVisible.value = false
+}
 
 const columnSpecs = computed<ColumnSpec[]>(() => {
   const count = props.inputLabels.length
@@ -77,7 +100,17 @@ const columnSpecs = computed<ColumnSpec[]>(() => {
           :class="{ 'operator-heading': column.kind === 'operator' }"
         >
           <template v-if="column.kind === 'input'">{{ inputLabels[column.inputIndex] }}</template>
-          <template v-else>{{ operatorToken }}</template>
+          <template v-else>
+            <span
+              class="logic-symbol"
+              :aria-label="operatorTooltip"
+              tabindex="0"
+              @mouseenter="showOperatorTooltip"
+              @mouseleave="hideOperatorTooltip"
+              @focus="showOperatorTooltip"
+              @blur="hideOperatorTooltip"
+            >{{ operatorToken }}</span>
+          </template>
         </th>
         <th scope="col" class="output-heading">OUTPUT</th>
       </tr>
@@ -121,4 +154,17 @@ const columnSpecs = computed<ColumnSpec[]>(() => {
       </tr>
     </tbody>
   </table>
+
+  <Teleport to="body">
+    <div
+      v-if="tooltipVisible"
+      class="logic-tooltip-overlay"
+      :class="`logic-tooltip-overlay--${tooltipDirection}`"
+      :style="tooltipStyle"
+      role="tooltip"
+      aria-live="polite"
+    >
+      {{ operatorTooltip }}
+    </div>
+  </Teleport>
 </template>

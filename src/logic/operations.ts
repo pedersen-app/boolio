@@ -1,8 +1,8 @@
 import type { LogicOperation, TruthTableRow } from '../types/game'
 
-export const logicOperations: LogicOperation[] = ['AND', 'OR', 'NOT', 'XOR']
+export const supportedOperations: LogicOperation[] = ['AND', 'OR', 'NOT', 'XOR']
 
-export function evaluateGate(operation: LogicOperation, inputs: readonly boolean[]): boolean {
+export function evaluateOperation(operation: LogicOperation, inputs: readonly boolean[]): boolean {
   switch (operation) {
     case 'AND': return inputs[0] === true && inputs[1] === true
     case 'OR': return inputs[0] === true || inputs[1] === true
@@ -11,7 +11,7 @@ export function evaluateGate(operation: LogicOperation, inputs: readonly boolean
   }
 }
 
-export function createTruthTable(operation: LogicOperation): TruthTableRow[] {
+export function createOperationTruthTable(operation: LogicOperation): TruthTableRow[] {
   const inputCombinations = operation === 'NOT'
     ? [[false], [true]]
     : [[false, false], [false, true], [true, false], [true, true]]
@@ -19,6 +19,6 @@ export function createTruthTable(operation: LogicOperation): TruthTableRow[] {
   return inputCombinations.map((inputs) => ({
     id: inputs.map(String).join('-'),
     inputs,
-    output: evaluateGate(operation, inputs),
+    output: evaluateOperation(operation, inputs),
   }))
 }

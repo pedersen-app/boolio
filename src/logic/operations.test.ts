@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createTruthTable, evaluateGate } from './gates'
+import { createOperationTruthTable, evaluateOperation } from './operations'
 import { generateQuestion } from './questionGenerator'
 import { awardCorrectAnswer } from './scoring'
 
-describe('Boolean gates', () => {
+describe('Boolean operations', () => {
   it.each([
     ['AND', [false, false], false],
     ['AND', [false, true], false],
@@ -20,12 +20,12 @@ describe('Boolean gates', () => {
     ['XOR', [true, false], true],
     ['XOR', [true, true], false],
   ] as const)('%s %j evaluates to %s', (operation, inputs, output) => {
-    expect(evaluateGate(operation, inputs)).toBe(output)
+    expect(evaluateOperation(operation, inputs)).toBe(output)
   })
 
-  it('creates two rows for NOT and four rows for binary gates', () => {
-    expect(createTruthTable('NOT')).toHaveLength(2)
-    expect(createTruthTable('XOR')).toHaveLength(4)
+  it('creates two rows for NOT and four rows for binary operations', () => {
+    expect(createOperationTruthTable('NOT')).toHaveLength(2)
+    expect(createOperationTruthTable('XOR')).toHaveLength(4)
   })
 })
 
@@ -47,7 +47,7 @@ describe('question generation', () => {
     }
   })
 
-  it('uses three inputs for hard difficulty gates', () => {
+  it('uses three inputs for hard difficulty operations', () => {
     const exercise = generateQuestion('OR', 'hard', undefined, () => 0)
     expect(exercise.rows).toHaveLength(8)
     expect(exercise.inputLabels).toEqual(['A', 'B', 'C'])
@@ -57,7 +57,7 @@ describe('question generation', () => {
     }
   })
 
-  it('uses four inputs for advanced binary gates', () => {
+  it('uses four inputs for advanced binary operations', () => {
     const exercise = generateQuestion('AND', 'advanced', undefined, () => 0)
     expect(exercise.rows).toHaveLength(16)
     expect(exercise.inputLabels).toEqual(['A', 'B', 'C', 'D'])
@@ -77,7 +77,7 @@ describe('question generation', () => {
     }
   })
 
-  it('uses five inputs for expert binary gates', () => {
+  it('uses five inputs for expert binary operations', () => {
     const exercise = generateQuestion('OR', 'expert', undefined, () => 0)
     expect(exercise.rows).toHaveLength(32)
     expect(exercise.inputLabels).toEqual(['A', 'B', 'C', 'D', 'E'])
