@@ -116,6 +116,37 @@ h1 span { color: var(--caramel); }
   outline-offset: 2px;
   box-shadow: 0 0 0 3px rgba(242, 166, 90, .3);
 }
+.notation-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.notation-toggle-button {
+  flex: 1 1 92px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #d7d6ca;
+  border-radius: 7px;
+  color: #5f6b61;
+  background: #f8f5eb;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .16s, color .16s, border-color .16s;
+}
+.notation-toggle-button:hover {
+  border-color: #b8bfaf;
+}
+.notation-toggle-button.active {
+  color: #fff;
+  border-color: #245c43;
+  background: #245c43;
+}
+.notation-toggle-button:focus-visible {
+  outline: 3px solid #e29a48;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(242, 166, 90, .3);
+}
 .session-start-button {
   min-height: 40px;
   padding: 0 12px;
@@ -167,8 +198,18 @@ h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia,
 .table-scroll { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; border: 1px solid #e9e5d9; border-radius: 6px; }
 .truth-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .truth-table th { height: 38px; color: #899186; background: #f5f4eb; text-align: center; font-size: 9px; letter-spacing: 1px; font-weight: 800; }
+.truth-table th.operator-heading {
+  width: 42px;
+  color: #6f786e;
+  letter-spacing: 0;
+  font-size: 12px;
+}
 .truth-table th.output-heading { width: 34%; }
 .truth-table td { height: 55px; border-top: 1px solid #eeeade; text-align: center; }
+.truth-table td.operator-cell {
+  width: 42px;
+  background: #fbfaf3;
+}
 .truth-table tbody tr:nth-child(even) { background: #fdfbf4; }
 .truth-value { min-width: 67px; display: inline-flex; justify-content: center; padding: 5px 9px; border: 1px solid #e7e5d9; border-radius: 4px; color: #737b71; background: #f8f7ef; font-size: 10px; font-weight: 800; letter-spacing: .45px; }
 .truth-value.true { color: #245c43; border-color: #d3e2d0; background: #edf5e9; }

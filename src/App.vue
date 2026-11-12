@@ -7,6 +7,8 @@ import { generateQuestion } from './logic/questionGenerator'
 import { awardCorrectAnswer } from './logic/scoring'
 import type { Difficulty, Exercise, GameMode, GameScore, InferenceRule, LogicOperation, ScoreByMode } from './types/game'
 
+type NotationMode = 'symbolic' | 'polish' | 'reversePolish'
+
 const correctMessages = [
   'Amazing thinking! You got it!',
   'Great work! Boolio is so proud of you!',
@@ -29,6 +31,12 @@ const difficultyLabels: Record<Difficulty, string> = {
 const inferenceRuleLabels: Record<InferenceRule, string> = {
   conjunction: 'Conjunction (AND)',
 }
+const notationModes: NotationMode[] = ['symbolic', 'polish', 'reversePolish']
+const notationModeLabels: Record<NotationMode, string> = {
+  symbolic: 'Symbolic',
+  polish: 'Polish',
+  reversePolish: 'Reverse Polish',
+}
 const operationsByInferenceRuleAndDifficulty: Record<InferenceRule, Record<Difficulty, LogicOperation[]>> = {
   conjunction: {
     easy: ['AND'],
@@ -42,6 +50,7 @@ const operationsByInferenceRuleAndDifficulty: Record<InferenceRule, Record<Diffi
 const mode = ref<GameMode>('practice')
 const difficulty = ref<Difficulty>('easy')
 const inferenceRule = ref<InferenceRule>('conjunction')
+const notationMode = ref<NotationMode>('polish')
 const isTestStarted = ref(false)
 const scores = ref<ScoreByMode>(loadScores())
 const exercise = ref<Exercise>(generateQuestion(nextOperation(mode.value), difficulty.value))
@@ -263,7 +272,25 @@ function checkAnswers() {
                   </option>
                 </select>
               </label>
-              <div v-else class="session-field">
+
+              <div class="session-field">
+                <span class="session-label">Notation</span>
+                <div class="notation-toggle" role="group" aria-label="Choose logic notation">
+                  <button
+                    v-for="option in notationModes"
+                    :key="option"
+                    type="button"
+                    class="notation-toggle-button"
+                    :class="{ active: notationMode === option }"
+                    :aria-pressed="notationMode === option"
+                    @click="notationMode = option"
+                  >
+                    {{ notationModeLabels[option] }}
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="mode !== 'practice'" class="session-field">
                 <span class="session-label">Test round</span>
                 <button type="button" class="session-start-button" @click="startTestRound">Start</button>
               </div>
@@ -305,6 +332,8 @@ function checkAnswers() {
         <div class="puzzle-panel puzzle-panel-bottom">
           <div v-if="mode === 'practice' || isTestStarted" class="table-scroll">
             <TruthTable
+              :operation="exercise.operation"
+              :notation-mode="notationMode"
               :input-labels="exercise.inputLabels"
               :rows="exercise.rows"
               :answers="answers"
