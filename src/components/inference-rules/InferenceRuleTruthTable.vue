@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { Component } from 'vue'
 import ConjunctionTruthTable from './ConjunctionTruthTable.vue'
 import DisjunctionTruthTable from './DisjunctionTruthTable.vue'
+import ModusPonensTruthTable from './ModusPonensTruthTable.vue'
 import type { InferenceRuleSelectorTableProps } from './types'
 
 const props = defineProps<InferenceRuleSelectorTableProps>()
@@ -11,9 +12,10 @@ const emit = defineEmits<{
   select: [rowId: string, answer: boolean]
 }>()
 
-const tableByRule: Record<InferenceRuleSelectorTableProps['inferenceRule'], Component> = {
+const tableByRule: Partial<Record<InferenceRuleSelectorTableProps['inferenceRule'], Component>> = {
   conjunction: ConjunctionTruthTable,
   disjunction: DisjunctionTruthTable,
+  'modus-ponens': ModusPonensTruthTable,
 }
 
 const activeTable = computed(() => tableByRule[props.inferenceRule] ?? ConjunctionTruthTable)
@@ -31,6 +33,7 @@ function handleSelect(rowId: string, answer: boolean) {
     :rows="props.rows"
     :answers="props.answers"
     :locked="props.locked"
+    :wrong-row-ids="props.wrongRowIds"
     @select="handleSelect"
   />
 </template>

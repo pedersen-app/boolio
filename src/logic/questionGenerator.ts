@@ -65,6 +65,8 @@ function evaluateForDifficulty(
       return inputs.every((value) => value === true)
     case 'OR':
       return inputs.some((value) => value === true)
+    case 'IMPLIES':
+      return inputs[0] !== true || inputs[1] === true
     case 'XOR':
       return inputs.reduce((isTrue, current) => (isTrue !== current), false)
     case 'NOT':
@@ -83,6 +85,8 @@ function ruleTextFor(operation: LogicOperation, inputCount: number, notVariant: 
         : 'AND is true only when both inputs are true.'
     case 'OR':
       return 'OR is true when at least one input is true.'
+    case 'IMPLIES':
+      return 'If P is true, then Q must also be true.'
     case 'XOR':
       return inputCount > 2
         ? 'XOR is true when an odd number of inputs are true.'
@@ -116,11 +120,15 @@ function makeExercise(
     output: null,
   }))
 
+  const inputLabels = operation === 'IMPLIES'
+    ? ['P', 'Q']
+    : inputLetters.slice(0, profile.inputCount)
+
   return {
     id: `${operation}:${difficulty}:${visibleOrder.map((row) => row.id).join(',')}:${[...missingRowIds].sort().join(',')}`,
     operation,
     difficulty,
-    inputLabels: inputLetters.slice(0, profile.inputCount),
+    inputLabels,
     ruleText: ruleTextFor(operation, profile.inputCount, profile.notVariant),
     rows,
     missingRowIds,

@@ -1,4 +1,7 @@
+import { h } from 'vue'
+import { renderToString } from 'vue/server-renderer'
 import { describe, expect, it } from 'vitest'
+import ConjunctionTruthTable from '../components/inference-rules/ConjunctionTruthTable.vue'
 import { createOperationTruthTable, evaluateOperation } from './operations'
 import { generateQuestion } from './questionGenerator'
 import { awardCorrectAnswer } from './scoring'
@@ -13,6 +16,10 @@ describe('Boolean operations', () => {
     ['OR', [false, true], true],
     ['OR', [true, false], true],
     ['OR', [true, true], true],
+    ['IMPLIES', [false, false], true],
+    ['IMPLIES', [false, true], true],
+    ['IMPLIES', [true, false], false],
+    ['IMPLIES', [true, true], true],
     ['NOT', [false], true],
     ['NOT', [true], false],
     ['XOR', [false, false], false],
@@ -26,6 +33,7 @@ describe('Boolean operations', () => {
   it('creates two rows for NOT and four rows for binary operations', () => {
     expect(createOperationTruthTable('NOT')).toHaveLength(2)
     expect(createOperationTruthTable('XOR')).toHaveLength(4)
+    expect(createOperationTruthTable('IMPLIES')).toHaveLength(4)
   })
 })
 
@@ -95,6 +103,37 @@ describe('question generation', () => {
       const expected = !((row.inputs[0] !== row.inputs[1]) || (row.inputs[2] === true && row.inputs[3] === true))
       expect(exercise.answerKey[row.id]).toBe(expected)
     }
+  })
+
+  it('creates Modus Ponens truth tables with implication semantics', () => {
+    const exercise = generateQuestion('IMPLIES', 'easy', undefined, () => 0)
+    expect(exercise.inputLabels).toEqual(['P', 'Q'])
+    expect(exercise.rows).toHaveLength(4)
+    for (const row of exercise.rows) {
+      const expected = !(row.inputs[0] === true && row.inputs[1] === false)
+      expect(exercise.answerKey[row.id]).toBe(expected)
+    }
+  })
+})
+
+describe('table rendering', () => {
+  it('passes wrong-row IDs through so incorrect rows show their highlight and expected value', async () => {
+    const rows = [
+      { id: 'r1', inputs: [false, false], output: true },
+      { id: 'r2', inputs: [true, false], output: false },
+    ]
+
+    const html = await renderToString(h(ConjunctionTruthTable, {
+      notationMode: 'polish',
+      inputLabels: ['A', 'B'],
+      rows,
+      answers: { r1: false, r2: false },
+      locked: false,
+      wrongRowIds: ['r1'],
+    }))
+
+    expect(html).toContain('wrong-row')
+    expect(html).toContain('Expected:')
   })
 })
 

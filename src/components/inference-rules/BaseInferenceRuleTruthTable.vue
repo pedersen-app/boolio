@@ -29,6 +29,7 @@ const operatorTooltip = computed(() => {
   const tooltipByOperation: Record<BaseInferenceRuleTableProps['operation'], string> = {
     AND: 'AND (conjunction): true only when all inputs are true.',
     OR: 'OR (disjunction): true when at least one input is true.',
+    IMPLIES: 'IMPLIES (conditional): false only when the premise is true and the conclusion is false.',
     NOT: 'NOT (negation): flips true and false.',
     XOR: 'XOR (exclusive OR): true when inputs are different.',
   }
@@ -116,20 +117,21 @@ const columnSpecs = computed<ColumnSpec[]>(() => {
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(row, index) in rows" :key="row.id">
+      <tr v-for="(row, index) in rows" :key="row.id" :class="{ 'wrong-row': wrongRowIds?.includes(row.id) }">
         <td
           v-for="(column, columnIndex) in columnSpecs"
           :key="`${row.id}:${columnIndex}`"
           :class="{ 'operator-cell': column.kind === 'operator' }"
           :aria-hidden="column.kind === 'operator' ? 'true' : undefined"
         >
-          <span
-            v-if="column.kind === 'input'"
-            class="truth-value"
-            :class="{ true: row.inputs[column.inputIndex] }"
-          >
-            {{ truthLabel(row.inputs[column.inputIndex]) }}
-          </span>
+          <template v-if="column.kind === 'input'">
+            <span
+              class="truth-value"
+              :class="{ true: row.inputs[column.inputIndex] }"
+            >
+              {{ truthLabel(row.inputs[column.inputIndex]) }}
+            </span>
+          </template>
         </td>
         <td class="output-cell">
           <div class="answer-options" role="group" :aria-label="`Answer for row ${index + 1}`">
@@ -149,6 +151,9 @@ const columnSpecs = computed<ColumnSpec[]>(() => {
               :disabled="locked"
               @click="emit('select', row.id, false)"
             >FALSE</button>
+          </div>
+          <div v-if="wrongRowIds?.includes(row.id)" class="row-error-detail">
+            Expected: {{ row.output === true ? 'TRUE' : 'FALSE' }}
           </div>
         </td>
       </tr>

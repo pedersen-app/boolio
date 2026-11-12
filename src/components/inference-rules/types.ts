@@ -8,6 +8,7 @@ export interface InferenceRuleTableProps {
   rows: TruthTableRow[]
   answers: Record<string, boolean>
   locked: boolean
+  wrongRowIds?: string[]
 }
 
 export interface BaseInferenceRuleTableProps extends InferenceRuleTableProps {

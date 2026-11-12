@@ -1,8 +1,46 @@
-export type LogicOperation = 'AND' | 'OR' | 'NOT' | 'XOR'
+export type LogicOperation = 'AND' | 'OR' | 'NOT' | 'XOR' | 'IMPLIES'
 
-export type InferenceRule = 'conjunction' | 'disjunction'
+export type InferenceRule = 'conjunction' | 'disjunction' | 'modus-ponens'
 
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'advanced' | 'expert'
+
+export interface InferenceRuleDefinition {
+  id: InferenceRule
+  label: string
+  operation: LogicOperation
+  symbol: string
+  tooltip: string
+  description: string
+}
+
+export const inferenceRuleDefinitions: Record<InferenceRule, InferenceRuleDefinition> = {
+  conjunction: {
+    id: 'conjunction',
+    label: 'Conjunction (AND)',
+    operation: 'AND',
+    symbol: '∧',
+    tooltip: 'AND (conjunction): true only when all inputs are true.',
+    description: 'AND is true only when all inputs are true.',
+  },
+  disjunction: {
+    id: 'disjunction',
+    label: 'Disjunction (OR)',
+    operation: 'OR',
+    symbol: '∨',
+    tooltip: 'OR (disjunction): true when at least one input is true.',
+    description: 'OR is true when at least one input is true.',
+  },
+  'modus-ponens': {
+    id: 'modus-ponens',
+    label: 'Modus Ponens (P → Q)',
+    operation: 'IMPLIES',
+    symbol: '→',
+    tooltip: 'IMPLIES (conditional): false only when the premise is true and the conclusion is false.',
+    description: 'If the premise is true, the conclusion must also be true.',
+  },
+}
+
+export const inferenceRuleOrder: InferenceRule[] = Object.keys(inferenceRuleDefinitions) as InferenceRule[]
 
 export type GameMode = 'practice' | 'test'
 

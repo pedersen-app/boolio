@@ -18,6 +18,7 @@ const emit = defineEmits<{
     :rows="props.rows"
     :answers="props.answers"
     :locked="props.locked"
+    :wrong-row-ids="props.wrongRowIds"
     @select="(rowId, answer) => emit('select', rowId, answer)"
   />
 </template>

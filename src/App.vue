@@ -5,7 +5,7 @@ import InferenceRuleTruthTable from './components/inference-rules/InferenceRuleT
 import boolioAsset from './assets/boolio.svg'
 import { generateQuestion } from './logic/questionGenerator'
 import { awardCorrectAnswer } from './logic/scoring'
-import type { Difficulty, Exercise, GameMode, GameScore, InferenceRule, LogicOperation, ScoreByMode } from './types/game'
+import { inferenceRuleDefinitions, inferenceRuleOrder, type Difficulty, type Exercise, type GameMode, type GameScore, type InferenceRule, type LogicOperation, type ScoreByMode } from './types/game'
 
 type NotationMode = 'symbolic' | 'polish' | 'reversePolish'
 
@@ -16,7 +16,7 @@ const correctMessages = [
 ]
 const modes: GameMode[] = ['practice', 'test']
 const difficulties: Difficulty[] = ['easy', 'medium', 'hard', 'advanced', 'expert']
-const inferenceRules: InferenceRule[] = ['conjunction', 'disjunction']
+const inferenceRules: InferenceRule[] = inferenceRuleOrder
 const modeLabels: Record<GameMode, string> = {
   practice: 'Practice',
   test: 'Test',
@@ -28,10 +28,9 @@ const difficultyLabels: Record<Difficulty, string> = {
   advanced: 'Advanced',
   expert: 'Expert',
 }
-const inferenceRuleLabels: Record<InferenceRule, string> = {
-  conjunction: 'Conjunction (AND)',
-  disjunction: 'Disjunction (OR)',
-}
+const inferenceRuleLabels: Record<InferenceRule, string> = Object.fromEntries(
+  inferenceRules.map((rule) => [rule, inferenceRuleDefinitions[rule].label]),
+) as Record<InferenceRule, string>
 const notationModes: NotationMode[] = ['symbolic', 'polish', 'reversePolish']
 const notationModeLabels: Record<NotationMode, string> = {
   symbolic: 'Symbolic',
@@ -53,16 +52,24 @@ const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, Logic
     advanced: ['OR'],
     expert: ['OR'],
   },
+  'modus-ponens': {
+    easy: ['IMPLIES'],
+    medium: ['IMPLIES'],
+    hard: ['IMPLIES'],
+    advanced: ['IMPLIES'],
+    expert: ['IMPLIES'],
+  },
 }
 
 const mode = ref<GameMode>('practice')
 const difficulty = ref<Difficulty>('easy')
 const inferenceRule = ref<InferenceRule>('conjunction')
-const notationMode = ref<NotationMode>('polish')
+const notationMode = ref<NotationMode>('symbolic')
 const isTestStarted = ref(false)
 const scores = ref<ScoreByMode>(loadScores())
 const exercise = ref<Exercise>(generateQuestion(nextRuleOperation(mode.value), difficulty.value))
 const answers = ref<Record<string, boolean>>({})
+const wrongRowIds = ref<string[]>([])
 const feedback = ref('Pick TRUE or FALSE for each output box.')
 const isCorrect = ref(false)
 const activeScore = computed(() => scores.value[mode.value])
@@ -161,6 +168,7 @@ function nextRuleOperation(currentMode: GameMode) {
 
 function resetRound(message: string) {
   answers.value = {}
+  wrongRowIds.value = []
   isCorrect.value = false
   feedback.value = message
 }
@@ -186,14 +194,19 @@ function startTestRound() {
 function selectAnswer(rowId: string, value: boolean) {
   if (isInteractionLocked.value) return
   answers.value = { ...answers.value, [rowId]: value }
+  wrongRowIds.value = exercise.value.rows
+    .filter((row) => answers.value[row.id] !== undefined && answers.value[row.id] !== exercise.value.answerKey[row.id])
+    .map((row) => row.id)
   feedback.value = 'You can change your answers before checking.'
 }
 
 function checkAnswers() {
   if (isInteractionLocked.value || !allAnswered.value) return
-  const correct = exercise.value.missingRowIds.every(
-    (rowId) => answers.value[rowId] === exercise.value.answerKey[rowId],
-  )
+  wrongRowIds.value = exercise.value.rows
+    .filter((row) => answers.value[row.id] !== exercise.value.answerKey[row.id])
+    .map((row) => row.id)
+
+  const correct = wrongRowIds.value.length === 0
 
   if (correct) {
     scores.value = {
@@ -205,7 +218,14 @@ function checkAnswers() {
     return
   }
 
-  feedback.value = `Almost! ${exercise.value.ruleText} Have another go!`
+  const wrongRowLabels = wrongRowIds.value
+    .map((rowId, index) => {
+      const rowNumber = exercise.value.rows.findIndex((row) => row.id === rowId) + 1
+      return rowNumber > 0 ? `row ${rowNumber}` : `row ${index + 1}`
+    })
+    .join(', ')
+
+  feedback.value = `Almost! ${exercise.value.ruleText} The ${wrongRowLabels} ${wrongRowIds.value.length > 1 ? 'are' : 'is'} incorrect. Have another go!`
 }
 </script>
 
@@ -346,6 +366,7 @@ function checkAnswers() {
               :rows="exercise.rows"
               :answers="answers"
               :locked="isInteractionLocked"
+              :wrong-row-ids="wrongRowIds"
               @select="selectAnswer"
             />
           </div>
