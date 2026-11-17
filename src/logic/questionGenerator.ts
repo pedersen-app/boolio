@@ -21,7 +21,7 @@ function shuffle<T>(values: T[], random: RandomSource): T[] {
 }
 
 function difficultyProfile(operation: LogicOperation, difficulty: Difficulty): DifficultyProfile {
-  if (operation === 'IMPLIES' || operation === 'MODUS_TOLLENS') {
+  if (operation === 'IMPLIES' || operation === 'MODUS_TOLLENS' || operation === 'DISJUNCTIVE_SYLLOGISM') {
     return {
       inputCount: 2,
       shuffleRows: difficulty !== 'easy',
@@ -29,7 +29,7 @@ function difficultyProfile(operation: LogicOperation, difficulty: Difficulty): D
     }
   }
 
-  if (operation === 'NOT') {
+  if (operation === 'NOT' || operation === 'DOUBLE_NEGATION') {
     switch (difficulty) {
       case 'easy': return { inputCount: 1, shuffleRows: false, notVariant: 'single' }
       case 'medium': return { inputCount: 1, shuffleRows: true, notVariant: 'single' }
@@ -77,6 +77,10 @@ function evaluateForDifficulty(
       return inputs[0] !== true || inputs[1] === true
     case 'MODUS_TOLLENS':
       return inputs[1] === true || inputs[0] !== true
+    case 'DISJUNCTIVE_SYLLOGISM':
+      return inputs[1] === true
+    case 'DOUBLE_NEGATION':
+      return inputs[0] === true
     case 'XOR':
       return inputs.reduce((isTrue, current) => (isTrue !== current), false)
     case 'NOT':
@@ -99,6 +103,10 @@ function ruleTextFor(operation: LogicOperation, inputCount: number, notVariant: 
       return 'If P is true, then Q must also be true.'
     case 'MODUS_TOLLENS':
       return 'If Q is false, then P must also be false (¬Q → ¬P).'
+    case 'DISJUNCTIVE_SYLLOGISM':
+      return 'If P is false, then Q must be true (¬P → Q).'
+    case 'DOUBLE_NEGATION':
+      return 'Double negation: ¬¬P is equivalent to P.'
     case 'XOR':
       return inputCount > 2
         ? 'XOR is true when an odd number of inputs are true.'
@@ -132,12 +140,15 @@ function makeExercise(
     output: null,
   }))
 
-  const inputLabels = operation === 'IMPLIES' || operation === 'MODUS_TOLLENS'
-    ? ['P', 'Q']
-    : inputLetters.slice(0, profile.inputCount)
+  const inputLabels = operation === 'DOUBLE_NEGATION'
+    ? ['P']
+    : operation === 'IMPLIES' || operation === 'MODUS_TOLLENS' || operation === 'DISJUNCTIVE_SYLLOGISM'
+      ? ['P', 'Q']
+      : inputLetters.slice(0, profile.inputCount)
 
   return {
     id: `${operation}:${difficulty}:${visibleOrder.map((row) => row.id).join(',')}:${[...missingRowIds].sort().join(',')}`,
+    kind: 'truth-table',
     operation,
     difficulty,
     inputLabels,

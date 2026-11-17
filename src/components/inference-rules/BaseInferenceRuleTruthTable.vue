@@ -31,6 +31,8 @@ const operatorTooltip = computed(() => {
     OR: 'OR (disjunction): true when at least one input is true.',
     IMPLIES: 'IMPLIES (conditional): false only when the premise is true and the conclusion is false.',
     MODUS_TOLLENS: 'MODUS TOLLENS: true unless P is true while Q is false.',
+    DISJUNCTIVE_SYLLOGISM: 'DISJUNCTIVE SYLLOGISM: if P is false, then Q must be true.',
+    DOUBLE_NEGATION: 'DOUBLE NEGATION: ¬¬P is equivalent to P.',
     NOT: 'NOT (negation): flips true and false.',
     XOR: 'XOR (exclusive OR): true when inputs are different.',
   }
@@ -69,7 +71,7 @@ const columnSpecs = computed<ColumnSpec[]>(() => {
   const count = props.inputLabels.length
   if (count === 0) return []
 
-  if (props.operation === 'NOT') {
+  if (props.operation === 'NOT' || props.operation === 'DOUBLE_NEGATION') {
     return props.notationMode === 'reversePolish'
       ? [{ kind: 'input', inputIndex: 0 }, { kind: 'operator' }]
       : [{ kind: 'operator' }, { kind: 'input', inputIndex: 0 }]

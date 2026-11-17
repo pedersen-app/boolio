@@ -1,6 +1,6 @@
-export type LogicOperation = 'AND' | 'OR' | 'NOT' | 'XOR' | 'IMPLIES' | 'MODUS_TOLLENS'
+export type LogicOperation = 'AND' | 'OR' | 'NOT' | 'XOR' | 'IMPLIES' | 'MODUS_TOLLENS' | 'DISJUNCTIVE_SYLLOGISM' | 'DOUBLE_NEGATION'
 
-export type InferenceRule = 'conjunction' | 'disjunction' | 'modus-ponens' | 'modus-tollens'
+export type InferenceRule = 'conjunction' | 'disjunction' | 'modus-ponens' | 'modus-tollens' | 'disjunctive-syllogism' | 'double-negation'
 
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'advanced' | 'expert'
 
@@ -46,6 +46,22 @@ export const inferenceRuleDefinitions: Record<InferenceRule, InferenceRuleDefini
     tooltip: 'MODUS TOLLENS: true unless P is true while Q is false.',
     description: 'If Q is false, then P must also be false.',
   },
+  'disjunctive-syllogism': {
+    id: 'disjunctive-syllogism',
+    label: 'Disjunctive Syllogism (P ∨ Q, ¬P ⇒ Q)',
+    operation: 'DISJUNCTIVE_SYLLOGISM',
+    symbol: '∨',
+    tooltip: 'DISJUNCTIVE SYLLOGISM: if P is false and Q is the remaining valid option, then Q must be true.',
+    description: 'If P is false while either statement is true, then Q must be true.',
+  },
+  'double-negation': {
+    id: 'double-negation',
+    label: 'Double Negation (¬¬P)',
+    operation: 'DOUBLE_NEGATION',
+    symbol: '¬',
+    tooltip: 'DOUBLE NEGATION: a statement is equivalent to its double negation.',
+    description: 'Double negation means ¬¬P is equivalent to P.',
+  },
 }
 
 export const inferenceRuleOrder: InferenceRule[] = Object.keys(inferenceRuleDefinitions) as InferenceRule[]
@@ -60,6 +76,7 @@ export interface TruthTableRow {
 
 export interface Exercise {
   id: string
+  kind?: 'truth-table'
   operation: LogicOperation
   difficulty: Difficulty
   inputLabels: string[]

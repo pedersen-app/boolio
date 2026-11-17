@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import ConjunctionTruthTable from '../components/inference-rules/ConjunctionTruthTable.vue'
 import ModusTollensTruthTable from '../components/inference-rules/ModusTollensTruthTable.vue'
 import { createOperationTruthTable, evaluateOperation } from './operations'
+import { generateMediumProofExercise } from './proofs'
 import { generateQuestion } from './questionGenerator'
 import { awardCorrectAnswer } from './scoring'
 
@@ -25,6 +26,12 @@ describe('Boolean operations', () => {
     ['MODUS_TOLLENS', [false, true], true],
     ['MODUS_TOLLENS', [true, false], false],
     ['MODUS_TOLLENS', [true, true], true],
+    ['DISJUNCTIVE_SYLLOGISM', [false, false], false],
+    ['DISJUNCTIVE_SYLLOGISM', [false, true], true],
+    ['DISJUNCTIVE_SYLLOGISM', [true, false], false],
+    ['DISJUNCTIVE_SYLLOGISM', [true, true], true],
+    ['DOUBLE_NEGATION', [false], false],
+    ['DOUBLE_NEGATION', [true], true],
     ['NOT', [false], true],
     ['NOT', [true], false],
     ['XOR', [false, false], false],
@@ -40,6 +47,8 @@ describe('Boolean operations', () => {
     expect(createOperationTruthTable('XOR')).toHaveLength(4)
     expect(createOperationTruthTable('IMPLIES')).toHaveLength(4)
     expect(createOperationTruthTable('MODUS_TOLLENS')).toHaveLength(4)
+    expect(createOperationTruthTable('DISJUNCTIVE_SYLLOGISM')).toHaveLength(4)
+    expect(createOperationTruthTable('DOUBLE_NEGATION')).toHaveLength(2)
   })
 })
 
@@ -130,6 +139,39 @@ describe('question generation', () => {
       const expected = row.inputs[1] === true || row.inputs[0] !== true
       expect(exercise.answerKey[row.id]).toBe(expected)
     }
+  })
+
+  it('creates Double Negation truth tables with identity semantics', () => {
+    const exercise = generateQuestion('DOUBLE_NEGATION', 'easy', undefined, () => 0)
+    expect(exercise.inputLabels).toEqual(['P'])
+    expect(exercise.rows).toHaveLength(2)
+    expect(exercise.ruleText).toBe('Double negation: ¬¬P is equivalent to P.')
+    for (const row of exercise.rows) {
+      expect(exercise.answerKey[row.id]).toBe(row.inputs[0])
+    }
+  })
+
+  it('cycles through the full proof set without repeating a rule before each proof type is used once', () => {
+    const first = generateMediumProofExercise('medium')
+    const second = generateMediumProofExercise('medium')
+    const third = generateMediumProofExercise('medium')
+    const fourth = generateMediumProofExercise('medium')
+
+    expect([first.rule, second.rule, third.rule, fourth.rule]).toHaveLength(4)
+    expect(new Set([first.rule, second.rule, third.rule, fourth.rule]).size).toBe(4)
+    expect(['modus-ponens', 'modus-tollens', 'disjunctive-syllogism', 'double-negation']).toEqual(
+      expect.arrayContaining([first.rule, second.rule, third.rule, fourth.rule]),
+    )
+  })
+
+  it('creates a one-step medium proof with unique conclusions and multiple answer choices', () => {
+    const exercise = generateMediumProofExercise('medium')
+    expect(exercise.kind).toBe('proof')
+    expect(exercise.premises.length).toBeGreaterThan(0)
+    expect(exercise.options).toHaveLength(3)
+    expect(new Set(exercise.options).size).toBe(exercise.options.length)
+    expect(exercise.options).toContain(exercise.proofAnswer)
+    expect(exercise.conclusion).toBe(exercise.proofAnswer)
   })
 })
 

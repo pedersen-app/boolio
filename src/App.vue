@@ -5,6 +5,7 @@ import InferenceRuleTruthTable from './components/inference-rules/InferenceRuleT
 import boolioAsset from './assets/boolio.svg'
 import { generateQuestion } from './logic/questionGenerator'
 import { awardCorrectAnswer } from './logic/scoring'
+import { generateMediumProofExercise, type ProofExercise } from './logic/proofs'
 import { inferenceRuleDefinitions, inferenceRuleOrder, type Difficulty, type Exercise, type GameMode, type GameScore, type InferenceRule, type LogicOperation, type ScoreByMode } from './types/game'
 
 type NotationMode = 'symbolic' | 'polish' | 'reversePolish'
@@ -71,6 +72,20 @@ const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, Logic
     advanced: ['MODUS_TOLLENS'],
     expert: ['MODUS_TOLLENS'],
   },
+  'disjunctive-syllogism': {
+    easy: ['DISJUNCTIVE_SYLLOGISM'],
+    medium: ['DISJUNCTIVE_SYLLOGISM'],
+    hard: ['DISJUNCTIVE_SYLLOGISM'],
+    advanced: ['DISJUNCTIVE_SYLLOGISM'],
+    expert: ['DISJUNCTIVE_SYLLOGISM'],
+  },
+  'double-negation': {
+    easy: ['DOUBLE_NEGATION'],
+    medium: ['DOUBLE_NEGATION'],
+    hard: ['DOUBLE_NEGATION'],
+    advanced: ['DOUBLE_NEGATION'],
+    expert: ['DOUBLE_NEGATION'],
+  },
 }
 
 const mode = ref<GameMode>('practice')
@@ -79,18 +94,31 @@ const inferenceRule = ref<InferenceRule>('conjunction')
 const notationMode = ref<NotationMode>('symbolic')
 const isTestStarted = ref(false)
 const scores = ref<ScoreByMode>(loadScores())
-const exercise = ref<Exercise>(generateQuestion(nextRuleOperation(mode.value), difficulty.value))
+const exercise = ref<Exercise | ProofExercise>(generateQuestion(nextRuleOperation(mode.value), difficulty.value))
 const answers = ref<Record<string, boolean>>({})
+const proofSelection = ref<string | null>(null)
 const wrongRowIds = ref<string[]>([])
 const feedback = ref('Pick TRUE or FALSE for each output box.')
 const isCorrect = ref(false)
 const celebrationVisible = ref(false)
 const celebrationMessage = ref(celebrationMessages[0]!)
 const solvedQuestionId = ref<string | null>(null)
+const completedProofRules = ref<Record<Difficulty, string[]>>({
+  easy: [],
+  medium: [],
+  hard: [],
+  advanced: [],
+  expert: [],
+})
+const difficultyPromotion = ref<{ from: Difficulty, to: Difficulty } | null>(null)
 const activeScore = computed(() => scores.value[mode.value])
-const allAnswered = computed(() =>
-  exercise.value.missingRowIds.every((rowId) => answers.value[rowId] !== undefined),
-)
+const allAnswered = computed(() => {
+  if (exercise.value.kind === 'proof') {
+    return proofSelection.value !== null
+  }
+
+  return exercise.value.missingRowIds.every((rowId) => answers.value[rowId] !== undefined)
+})
 const isInteractionLocked = computed(() =>
   isCorrect.value || (mode.value === 'test' && !isTestStarted.value),
 )
@@ -168,7 +196,11 @@ function allowedRuleOperations(currentInferenceRule: InferenceRule, currentDiffi
 }
 
 function availableInferenceRulesForDifficulty(currentDifficulty: Difficulty): InferenceRule[] {
-  return inferenceRules.filter((rule) => allowedRuleOperations(rule, currentDifficulty).length > 0)
+  if (currentDifficulty === 'easy') {
+    return inferenceRules.filter((rule) => allowedRuleOperations(rule, currentDifficulty).length > 0)
+  }
+
+  return ['modus-ponens', 'modus-tollens', 'disjunctive-syllogism', 'double-negation'] as InferenceRule[]
 }
 
 function nextRuleOperation(currentMode: GameMode) {
@@ -193,7 +225,9 @@ function showCelebration() {
 
 function resetRound(message: string) {
   hideCelebration()
+  difficultyPromotion.value = null
   answers.value = {}
+  proofSelection.value = null
   wrongRowIds.value = []
   isCorrect.value = false
   solvedQuestionId.value = null
@@ -201,11 +235,17 @@ function resetRound(message: string) {
 }
 
 function startNextQuestion() {
+  if (difficulty.value !== 'easy') {
+    exercise.value = generateMediumProofExercise(difficulty.value)
+    resetRound('Choose the correct conclusion for this one-step proof.')
+    return
+  }
+
   const questionOperation = nextRuleOperation(mode.value)
   exercise.value = generateQuestion(
     questionOperation,
     difficulty.value,
-    exercise.value?.id,
+    exercise.value && 'id' in exercise.value ? exercise.value.id : undefined,
   )
   resetRound('Pick TRUE or FALSE for each output box.')
 }
@@ -213,29 +253,101 @@ function startNextQuestion() {
 function startTestRound() {
   const availableRules = availableInferenceRulesForDifficulty(difficulty.value)
   const index = Math.floor(Math.random() * availableRules.length)
-  inferenceRule.value = availableRules[index] ?? 'conjunction'
+  inferenceRule.value = availableRules[index] ?? 'modus-ponens'
   isTestStarted.value = true
+  startNextQuestion()
+}
+
+function getNextDifficulty(currentDifficulty: Difficulty): Difficulty | null {
+  const currentIndex = difficulties.indexOf(currentDifficulty)
+  const nextDifficulty = difficulties[currentIndex + 1]
+  return nextDifficulty ?? null
+}
+
+function markProofRuleSolved(level: Difficulty, rule: string) {
+  const solvedRules = completedProofRules.value[level] ?? []
+  if (!solvedRules.includes(rule)) {
+    completedProofRules.value = {
+      ...completedProofRules.value,
+      [level]: [...solvedRules, rule],
+    }
+  }
+}
+
+function hasCompletedAllProofTypes(level: Difficulty): boolean {
+  const proofRules = ['modus-ponens', 'modus-tollens', 'disjunctive-syllogism', 'double-negation']
+  const solvedRules = completedProofRules.value[level] ?? []
+  return proofRules.every((rule) => solvedRules.includes(rule))
+}
+
+function promptForNextDifficulty() {
+  if (difficulty.value === 'easy' || !hasCompletedAllProofTypes(difficulty.value)) return
+
+  const nextDifficulty = getNextDifficulty(difficulty.value)
+  if (!nextDifficulty) return
+
+  difficultyPromotion.value = {
+    from: difficulty.value,
+    to: nextDifficulty,
+  }
+  feedback.value = `You’ve cleared every proof type in ${difficultyLabels[difficulty.value]}. Want to try ${difficultyLabels[nextDifficulty]}?`
+}
+
+function acceptDifficultyPromotion() {
+  if (!difficultyPromotion.value) return
+
+  difficulty.value = difficultyPromotion.value.to
+  difficultyPromotion.value = null
+  startNextQuestion()
+}
+
+function declineDifficultyPromotion() {
+  if (!difficultyPromotion.value) return
+
+  difficultyPromotion.value = null
   startNextQuestion()
 }
 
 function selectAnswer(rowId: string, value: boolean) {
   if (isInteractionLocked.value) return
+  if (exercise.value.kind === 'proof') {
+    return
+  }
+
+  const truthTableExercise = exercise.value
   answers.value = { ...answers.value, [rowId]: value }
-  wrongRowIds.value = exercise.value.rows
-    .filter((row) => answers.value[row.id] !== undefined && answers.value[row.id] !== exercise.value.answerKey[row.id])
+  wrongRowIds.value = truthTableExercise.rows
+    .filter((row) => answers.value[row.id] !== undefined && answers.value[row.id] !== truthTableExercise.answerKey[row.id])
     .map((row) => row.id)
+  evaluateAnswers()
+}
+
+function handleProofChoice(choice: string) {
+  if (isInteractionLocked.value || exercise.value.kind !== 'proof') return
+
+  proofSelection.value = choice
   evaluateAnswers()
 }
 
 function evaluateAnswers() {
   if (!allAnswered.value) {
-    feedback.value = 'Keep going! Fill every output box to complete the puzzle.'
+    if (exercise.value.kind === 'proof') {
+      feedback.value = 'Choose the conclusion that follows from the premises.'
+    } else {
+      feedback.value = 'Keep going! Fill every output box to complete the puzzle.'
+    }
     return
   }
 
-  const correct = wrongRowIds.value.length === 0
+  const correct = exercise.value.kind === 'proof'
+    ? proofSelection.value === exercise.value.proofAnswer
+    : wrongRowIds.value.length === 0
 
   if (correct) {
+    if (exercise.value.kind === 'proof') {
+      markProofRuleSolved(difficulty.value, exercise.value.rule)
+    }
+
     if (solvedQuestionId.value !== exercise.value.id) {
       scores.value = {
         ...scores.value,
@@ -246,19 +358,29 @@ function evaluateAnswers() {
     }
     isCorrect.value = true
     feedback.value = correctMessages[Math.floor(Math.random() * correctMessages.length)] ?? correctMessages[0]!
+
+    if (exercise.value.kind === 'proof') {
+      promptForNextDifficulty()
+    }
     return
   }
 
   isCorrect.value = false
 
+  if (exercise.value.kind === 'proof') {
+    feedback.value = `Almost! ${exercise.value.ruleText} Try a different conclusion.`
+    return
+  }
+
+  const truthTableExercise = exercise.value
   const wrongRowLabels = wrongRowIds.value
     .map((rowId, index) => {
-      const rowNumber = exercise.value.rows.findIndex((row) => row.id === rowId) + 1
+      const rowNumber = truthTableExercise.rows.findIndex((row) => row.id === rowId) + 1
       return rowNumber > 0 ? `row ${rowNumber}` : `row ${index + 1}`
     })
     .join(', ')
 
-  feedback.value = `Almost! ${exercise.value.ruleText} The ${wrongRowLabels} ${wrongRowIds.value.length > 1 ? 'are' : 'is'} incorrect. Have another go!`
+  feedback.value = `Almost! ${truthTableExercise.ruleText} The ${wrongRowLabels} ${wrongRowIds.value.length > 1 ? 'are' : 'is'} incorrect. Have another go!`
 }
 </script>
 
@@ -325,7 +447,7 @@ function evaluateAnswers() {
                 </select>
               </label>
 
-              <label v-if="mode === 'practice'" class="session-field" for="inference-rule-select">
+              <label v-if="mode === 'practice' && difficulty === 'easy'" class="session-field" for="inference-rule-select">
                 <span class="session-label">Inference rule</span>
                 <select id="inference-rule-select" v-model="inferenceRule" class="session-select" aria-label="Choose inference rule">
                   <option v-for="rule in inferenceRules" :key="rule" :value="rule">
@@ -359,8 +481,11 @@ function evaluateAnswers() {
           </div>
 
           <div class="test-mode-note" aria-live="polite">
-            <template v-if="mode === 'practice'">
+            <template v-if="mode === 'practice' && difficulty === 'easy'">
               Practice mode uses the selected inference rule. Current inference rule: <strong>{{ inferenceRuleLabels[inferenceRule] }}</strong>
+            </template>
+            <template v-else-if="mode === 'practice' && difficulty !== 'easy'">
+              Medium and higher start with proof-style logic. The rule picker is hidden while you work through the logic challenge.
             </template>
             <template v-else-if="!isTestStarted">
               Press Start to choose an inference rule for this difficulty and begin your test round.
@@ -392,7 +517,38 @@ function evaluateAnswers() {
 
         <div class="puzzle-panel puzzle-panel-bottom">
           <div v-if="mode === 'practice' || isTestStarted" class="table-scroll">
+            <template v-if="exercise.kind === 'proof'">
+              <div class="proof-card">
+                <div class="proof-row">
+                  <span class="proof-row-label">Premises</span>
+                  <div class="proof-premises">
+                    <div v-for="(premise, index) in exercise.premises" :key="premise + index" class="proof-step proof-premise-step">
+                      <span class="proof-step-number">Step {{ index + 1 }}</span>
+                      <span class="proof-step-text proof-premise">{{ premise }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="proof-row proof-row-conclusion">
+                  <span class="proof-row-label">Choose the conclusion</span>
+                  <div class="proof-options">
+                    <button
+                      v-for="option in exercise.options"
+                      :key="option"
+                      type="button"
+                      class="proof-option"
+                      :class="{ selected: proofSelection === option, correct: isCorrect && option === exercise.proofAnswer, wrong: proofSelection === option && !isCorrect && option !== exercise.proofAnswer }"
+                      :disabled="isInteractionLocked"
+                      @click="handleProofChoice(option)"
+                    >
+                      <span class="proof-step-text proof-option-text">{{ option }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
             <InferenceRuleTruthTable
+              v-else
               :inference-rule="inferenceRule"
               :notation-mode="notationMode"
               :input-labels="exercise.inputLabels"
@@ -410,8 +566,16 @@ function evaluateAnswers() {
               {{ feedback }}
             </p>
             <div v-if="mode === 'practice' || isTestStarted" class="action-row">
+              <template v-if="difficultyPromotion && isCorrect">
+                <button class="check-button next-button" type="button" @click="acceptDifficultyPromotion">
+                  Try {{ difficultyLabels[difficultyPromotion.to] }} <span aria-hidden="true">→</span>
+                </button>
+                <button class="secondary-button" type="button" @click="declineDifficultyPromotion">
+                  Stay on {{ difficultyLabels[difficultyPromotion.from] }}
+                </button>
+              </template>
               <button
-                v-if="isCorrect"
+                v-else-if="isCorrect"
                 class="check-button next-button transition-colors duration-150"
                 type="button"
                 @click="mode === 'test' ? startTestRound() : startNextQuestion()"
