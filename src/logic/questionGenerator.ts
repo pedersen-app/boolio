@@ -21,6 +21,14 @@ function shuffle<T>(values: T[], random: RandomSource): T[] {
 }
 
 function difficultyProfile(operation: LogicOperation, difficulty: Difficulty): DifficultyProfile {
+  if (operation === 'IMPLIES' || operation === 'MODUS_TOLLENS') {
+    return {
+      inputCount: 2,
+      shuffleRows: difficulty !== 'easy',
+      notVariant: 'single',
+    }
+  }
+
   if (operation === 'NOT') {
     switch (difficulty) {
       case 'easy': return { inputCount: 1, shuffleRows: false, notVariant: 'single' }
@@ -67,6 +75,8 @@ function evaluateForDifficulty(
       return inputs.some((value) => value === true)
     case 'IMPLIES':
       return inputs[0] !== true || inputs[1] === true
+    case 'MODUS_TOLLENS':
+      return inputs[1] === true || inputs[0] !== true
     case 'XOR':
       return inputs.reduce((isTrue, current) => (isTrue !== current), false)
     case 'NOT':
@@ -87,6 +97,8 @@ function ruleTextFor(operation: LogicOperation, inputCount: number, notVariant: 
       return 'OR is true when at least one input is true.'
     case 'IMPLIES':
       return 'If P is true, then Q must also be true.'
+    case 'MODUS_TOLLENS':
+      return 'If Q is false, then P must also be false (¬Q → ¬P).'
     case 'XOR':
       return inputCount > 2
         ? 'XOR is true when an odd number of inputs are true.'
@@ -120,7 +132,7 @@ function makeExercise(
     output: null,
   }))
 
-  const inputLabels = operation === 'IMPLIES'
+  const inputLabels = operation === 'IMPLIES' || operation === 'MODUS_TOLLENS'
     ? ['P', 'Q']
     : inputLetters.slice(0, profile.inputCount)
 

@@ -1,12 +1,13 @@
 import type { LogicOperation, TruthTableRow } from '../types/game'
 
-export const supportedOperations: LogicOperation[] = ['AND', 'OR', 'NOT', 'XOR', 'IMPLIES']
+export const supportedOperations: LogicOperation[] = ['AND', 'OR', 'NOT', 'XOR', 'IMPLIES', 'MODUS_TOLLENS']
 
 export function evaluateOperation(operation: LogicOperation, inputs: readonly boolean[]): boolean {
   switch (operation) {
     case 'AND': return inputs[0] === true && inputs[1] === true
     case 'OR': return inputs[0] === true || inputs[1] === true
     case 'IMPLIES': return inputs[0] !== true || inputs[1] === true
+    case 'MODUS_TOLLENS': return inputs[1] === true || inputs[0] !== true
     case 'NOT': return inputs[0] !== true
     case 'XOR': return inputs[0] !== inputs[1]
   }

@@ -270,6 +270,7 @@ h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia,
 .feedback { max-width: 68%; margin: 0; color: #7a8279; font-size: 11px; line-height: 1.45; }
 .feedback.success { color: var(--forest); font-weight: 700; }
 .feedback-mark { margin-right: 5px; color: var(--orange); font-size: 15px; vertical-align: -1px; }
+.action-row { display: flex; justify-content: flex-end; }
 .check-button { min-width: 137px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 0 15px; border: 0; border-radius: 5px; color: white; background: var(--forest); font-size: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 10px rgba(36, 92, 67, .14); }
 .check-button:hover:not(:disabled) { background: var(--forest-deep); }
 .check-button:disabled { color: #90978e; background: #e9ebe3; box-shadow: none; cursor: not-allowed; }
@@ -300,11 +301,129 @@ h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia,
 .guide-bottom { width: 100%; display: flex; align-items: center; gap: 9px; margin-top: auto; padding-top: 14px; color: #6e806e; }
 .guide-bottom p { margin: 0; font-size: 10px; line-height: 1.4; }
 .guide-leaf { color: #87a57d; font-size: 16px; }
+.celebration-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(27, 48, 34, 0.28);
+  backdrop-filter: blur(2px);
+}
+
+.celebration-card {
+  width: min(460px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  position: relative;
+  padding: 18px 18px 16px;
+  border: 1px solid rgba(36, 92, 67, 0.24);
+  border-radius: 14px;
+  background: linear-gradient(160deg, #fffdf7 0%, #f2f7ef 100%);
+  box-shadow: 0 18px 40px rgba(26, 46, 33, 0.26);
+}
+
+.celebration-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #d3ddcf;
+  border-radius: 999px;
+  color: #426248;
+  background: #f8fbf5;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.celebration-close:hover {
+  border-color: #b7c8b1;
+  background: #eff6ea;
+}
+
+.celebration-close:focus-visible {
+  outline: 3px solid #e29a48;
+  outline-offset: 2px;
+}
+
+.celebration-topline {
+  color: #4f6f51;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.celebration-line {
+  margin: 0;
+  color: #2a5d43;
+  font-family: Fraunces, Georgia, serif;
+  font-size: clamp(18px, 1.1rem + 0.4vw, 24px);
+  line-height: 1.25;
+  text-align: center;
+}
+
+.celebration-stump {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  padding-top: 2px;
+}
+
+.stump-ring {
+  width: 72px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #8e6f49;
+  background: radial-gradient(circle at 50% 45%, #d1b186 0%, #b88f61 55%, #9a744a 100%);
+}
+
+.axe-spark {
+  position: absolute;
+  top: -2px;
+  right: calc(50% - 52px);
+  color: #d98a31;
+  font-size: 18px;
+  animation: axe-spark 900ms ease-in-out infinite;
+}
+
+.celebration-pop-enter-active,
+.celebration-pop-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.celebration-pop-enter-active .celebration-card {
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+.celebration-pop-leave-active .celebration-card {
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.celebration-pop-enter-from,
+.celebration-pop-leave-to {
+  opacity: 0;
+}
+
+.celebration-pop-enter-from .celebration-card,
+.celebration-pop-leave-to .celebration-card {
+  transform: scale(.95) translateY(6px);
+  opacity: 0;
+}
+
 .page-footer { display: flex; justify-content: center; align-items: center; gap: 11px; padding: 22px 0 0; color: #91968a; font-size: 10px; }
 .footer-tree { color: #8ca681; font-size: 13px; }
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes twinkle { 0%, 100% { opacity: .55; transform: scale(.88) rotate(-8deg); } 50% { opacity: 1; transform: scale(1.1) rotate(8deg); } }
 @keyframes cheer { 0%, 100% { transform: translateY(0) rotate(0); } 35% { transform: translateY(-13px) rotate(-4deg); } 70% { transform: translateY(-4px) rotate(4deg); } }
+@keyframes axe-spark {
+  0%, 100% { transform: scale(.86) rotate(-8deg); opacity: .65; }
+  50% { transform: scale(1.15) rotate(10deg); opacity: 1; }
+}
 
 @media (min-width: 760px) {
   .play-top-row { grid-template-columns: minmax(0, 1fr) 250px; }
@@ -440,6 +559,8 @@ h2 { margin: 5px 0 0; color: var(--forest-deep); font-family: Fraunces, Georgia,
   .speech-bubble p { font-size: 12px; }
   .speech-tail { top: auto; left: -6px; transform: rotate(-45deg); border: 0; border-bottom: 1px solid rgba(36, 92, 67, .13); border-left: 1px solid rgba(36, 92, 67, .13); }
   .guide-bottom { grid-column: 1 / -1; padding-top: 7px; }
+  .celebration-card { padding: 14px 12px 12px; }
+  .celebration-line { font-size: 18px; }
   .page-footer { padding-top: 16px; font-size: 9px; }
 }
 @media (max-width: 480px) {

@@ -30,6 +30,7 @@ const operatorTooltip = computed(() => {
     AND: 'AND (conjunction): true only when all inputs are true.',
     OR: 'OR (disjunction): true when at least one input is true.',
     IMPLIES: 'IMPLIES (conditional): false only when the premise is true and the conclusion is false.',
+    MODUS_TOLLENS: 'MODUS TOLLENS: true unless P is true while Q is false.',
     NOT: 'NOT (negation): flips true and false.',
     XOR: 'XOR (exclusive OR): true when inputs are different.',
   }

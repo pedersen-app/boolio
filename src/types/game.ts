@@ -1,6 +1,6 @@
-export type LogicOperation = 'AND' | 'OR' | 'NOT' | 'XOR' | 'IMPLIES'
+export type LogicOperation = 'AND' | 'OR' | 'NOT' | 'XOR' | 'IMPLIES' | 'MODUS_TOLLENS'
 
-export type InferenceRule = 'conjunction' | 'disjunction' | 'modus-ponens'
+export type InferenceRule = 'conjunction' | 'disjunction' | 'modus-ponens' | 'modus-tollens'
 
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'advanced' | 'expert'
 
@@ -37,6 +37,14 @@ export const inferenceRuleDefinitions: Record<InferenceRule, InferenceRuleDefini
     symbol: '→',
     tooltip: 'IMPLIES (conditional): false only when the premise is true and the conclusion is false.',
     description: 'If the premise is true, the conclusion must also be true.',
+  },
+  'modus-tollens': {
+    id: 'modus-tollens',
+    label: 'Modus Tollens (¬Q → ¬P)',
+    operation: 'MODUS_TOLLENS',
+    symbol: '→',
+    tooltip: 'MODUS TOLLENS: true unless P is true while Q is false.',
+    description: 'If Q is false, then P must also be false.',
   },
 }
 

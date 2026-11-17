@@ -2,6 +2,7 @@ import { h } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { describe, expect, it } from 'vitest'
 import ConjunctionTruthTable from '../components/inference-rules/ConjunctionTruthTable.vue'
+import ModusTollensTruthTable from '../components/inference-rules/ModusTollensTruthTable.vue'
 import { createOperationTruthTable, evaluateOperation } from './operations'
 import { generateQuestion } from './questionGenerator'
 import { awardCorrectAnswer } from './scoring'
@@ -20,6 +21,10 @@ describe('Boolean operations', () => {
     ['IMPLIES', [false, true], true],
     ['IMPLIES', [true, false], false],
     ['IMPLIES', [true, true], true],
+    ['MODUS_TOLLENS', [false, false], true],
+    ['MODUS_TOLLENS', [false, true], true],
+    ['MODUS_TOLLENS', [true, false], false],
+    ['MODUS_TOLLENS', [true, true], true],
     ['NOT', [false], true],
     ['NOT', [true], false],
     ['XOR', [false, false], false],
@@ -34,6 +39,7 @@ describe('Boolean operations', () => {
     expect(createOperationTruthTable('NOT')).toHaveLength(2)
     expect(createOperationTruthTable('XOR')).toHaveLength(4)
     expect(createOperationTruthTable('IMPLIES')).toHaveLength(4)
+    expect(createOperationTruthTable('MODUS_TOLLENS')).toHaveLength(4)
   })
 })
 
@@ -114,9 +120,41 @@ describe('question generation', () => {
       expect(exercise.answerKey[row.id]).toBe(expected)
     }
   })
+
+  it('creates Modus Tollens truth tables with negated-conditional semantics', () => {
+    const exercise = generateQuestion('MODUS_TOLLENS', 'easy', undefined, () => 0)
+    expect(exercise.inputLabels).toEqual(['P', 'Q'])
+    expect(exercise.rows).toHaveLength(4)
+    expect(exercise.ruleText).toBe('If Q is false, then P must also be false (¬Q → ¬P).')
+    for (const row of exercise.rows) {
+      const expected = row.inputs[1] === true || row.inputs[0] !== true
+      expect(exercise.answerKey[row.id]).toBe(expected)
+    }
+  })
 })
 
 describe('table rendering', () => {
+  it('shows negated headers for Modus Tollens to mirror ¬Q → ¬P form', async () => {
+    const rows = [
+      { id: 'r1', inputs: [false, false], output: true },
+      { id: 'r2', inputs: [false, true], output: true },
+      { id: 'r3', inputs: [true, false], output: false },
+      { id: 'r4', inputs: [true, true], output: true },
+    ]
+
+    const html = await renderToString(h(ModusTollensTruthTable, {
+      notationMode: 'symbolic',
+      inputLabels: ['P', 'Q'],
+      rows,
+      answers: {},
+      locked: false,
+      wrongRowIds: [],
+    }))
+
+    expect(html).toContain('¬Q')
+    expect(html).toContain('¬P')
+  })
+
   it('passes wrong-row IDs through so incorrect rows show their highlight and expected value', async () => {
     const rows = [
       { id: 'r1', inputs: [false, false], output: true },

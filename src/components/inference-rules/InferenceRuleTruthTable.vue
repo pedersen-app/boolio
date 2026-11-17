@@ -4,6 +4,7 @@ import type { Component } from 'vue'
 import ConjunctionTruthTable from './ConjunctionTruthTable.vue'
 import DisjunctionTruthTable from './DisjunctionTruthTable.vue'
 import ModusPonensTruthTable from './ModusPonensTruthTable.vue'
+import ModusTollensTruthTable from './ModusTollensTruthTable.vue'
 import type { InferenceRuleSelectorTableProps } from './types'
 
 const props = defineProps<InferenceRuleSelectorTableProps>()
@@ -16,6 +17,7 @@ const tableByRule: Partial<Record<InferenceRuleSelectorTableProps['inferenceRule
   conjunction: ConjunctionTruthTable,
   disjunction: DisjunctionTruthTable,
   'modus-ponens': ModusPonensTruthTable,
+  'modus-tollens': ModusTollensTruthTable,
 }
 
 const activeTable = computed(() => tableByRule[props.inferenceRule] ?? ConjunctionTruthTable)

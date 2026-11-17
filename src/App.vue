@@ -14,6 +14,11 @@ const correctMessages = [
   'Great work! Boolio is so proud of you!',
   'You cracked the puzzle. High five!',
 ]
+const celebrationMessages = [
+  'Timber! That logic tree never stood a chance.',
+  'Chop chop, genius beaver. Puzzle solved.',
+  'One clean swing and that argument fell perfectly.',
+]
 const modes: GameMode[] = ['practice', 'test']
 const difficulties: Difficulty[] = ['easy', 'medium', 'hard', 'advanced', 'expert']
 const inferenceRules: InferenceRule[] = inferenceRuleOrder
@@ -59,6 +64,13 @@ const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, Logic
     advanced: ['IMPLIES'],
     expert: ['IMPLIES'],
   },
+  'modus-tollens': {
+    easy: ['MODUS_TOLLENS'],
+    medium: ['MODUS_TOLLENS'],
+    hard: ['MODUS_TOLLENS'],
+    advanced: ['MODUS_TOLLENS'],
+    expert: ['MODUS_TOLLENS'],
+  },
 }
 
 const mode = ref<GameMode>('practice')
@@ -72,6 +84,9 @@ const answers = ref<Record<string, boolean>>({})
 const wrongRowIds = ref<string[]>([])
 const feedback = ref('Pick TRUE or FALSE for each output box.')
 const isCorrect = ref(false)
+const celebrationVisible = ref(false)
+const celebrationMessage = ref(celebrationMessages[0]!)
+const solvedQuestionId = ref<string | null>(null)
 const activeScore = computed(() => scores.value[mode.value])
 const allAnswered = computed(() =>
   exercise.value.missingRowIds.every((rowId) => answers.value[rowId] !== undefined),
@@ -166,10 +181,22 @@ function nextRuleOperation(currentMode: GameMode) {
   return availableRuleOperations[index] ?? fallbackOperation
 }
 
+function hideCelebration() {
+  celebrationVisible.value = false
+}
+
+function showCelebration() {
+  const index = Math.floor(Math.random() * celebrationMessages.length)
+  celebrationMessage.value = celebrationMessages[index] ?? celebrationMessages[0]!
+  celebrationVisible.value = true
+}
+
 function resetRound(message: string) {
+  hideCelebration()
   answers.value = {}
   wrongRowIds.value = []
   isCorrect.value = false
+  solvedQuestionId.value = null
   feedback.value = message
 }
 
@@ -197,26 +224,32 @@ function selectAnswer(rowId: string, value: boolean) {
   wrongRowIds.value = exercise.value.rows
     .filter((row) => answers.value[row.id] !== undefined && answers.value[row.id] !== exercise.value.answerKey[row.id])
     .map((row) => row.id)
-  feedback.value = 'You can change your answers before checking.'
+  evaluateAnswers()
 }
 
-function checkAnswers() {
-  if (isInteractionLocked.value || !allAnswered.value) return
-  wrongRowIds.value = exercise.value.rows
-    .filter((row) => answers.value[row.id] !== exercise.value.answerKey[row.id])
-    .map((row) => row.id)
+function evaluateAnswers() {
+  if (!allAnswered.value) {
+    feedback.value = 'Keep going! Fill every output box to complete the puzzle.'
+    return
+  }
 
   const correct = wrongRowIds.value.length === 0
 
   if (correct) {
-    scores.value = {
-      ...scores.value,
-      [mode.value]: awardCorrectAnswer(scores.value[mode.value]),
+    if (solvedQuestionId.value !== exercise.value.id) {
+      scores.value = {
+        ...scores.value,
+        [mode.value]: awardCorrectAnswer(scores.value[mode.value]),
+      }
+      solvedQuestionId.value = exercise.value.id
+      showCelebration()
     }
     isCorrect.value = true
     feedback.value = correctMessages[Math.floor(Math.random() * correctMessages.length)] ?? correctMessages[0]!
     return
   }
+
+  isCorrect.value = false
 
   const wrongRowLabels = wrongRowIds.value
     .map((rowId, index) => {
@@ -378,16 +411,7 @@ function checkAnswers() {
             </p>
             <div v-if="mode === 'practice' || isTestStarted" class="action-row">
               <button
-                v-if="!isCorrect"
-                class="check-button transition-colors duration-150"
-                type="button"
-                :disabled="!allAnswered || isInteractionLocked"
-                @click="checkAnswers"
-              >
-                Check answers <span aria-hidden="true">↗</span>
-              </button>
-              <button
-                v-else
+                v-if="isCorrect"
                 class="check-button next-button transition-colors duration-150"
                 type="button"
                 @click="mode === 'test' ? startTestRound() : startNextQuestion()"
@@ -404,6 +428,21 @@ function checkAnswers() {
         <span class="footer-tree" aria-hidden="true">✳</span>
         <span>One puzzle at a time</span>
       </footer>
+
+      <Transition name="celebration-pop">
+        <div v-if="celebrationVisible" class="celebration-overlay" role="status" aria-live="polite" @click.self="hideCelebration">
+          <div class="celebration-card">
+            <button type="button" class="celebration-close" aria-label="Close celebration" @click="hideCelebration">Close ✕</button>
+            <div class="celebration-topline">WOODLAND VICTORY</div>
+            <BoolioMascot mood="cheering" />
+            <p class="celebration-line">{{ celebrationMessage }}</p>
+            <div class="celebration-stump" aria-hidden="true">
+              <span class="stump-ring"></span>
+              <span class="axe-spark">✳</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </main>
   </div>
 </template>
