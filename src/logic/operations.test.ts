@@ -120,6 +120,26 @@ describe('question generation', () => {
     }
   })
 
+  it('uses expert-equivalent binary behavior for collegiate difficulty placeholder', () => {
+    const exercise = generateQuestion('OR', 'collegiate', undefined, () => 0)
+    expect(exercise.rows).toHaveLength(32)
+    expect(exercise.inputLabels).toEqual(['A', 'B', 'C', 'D', 'E'])
+    for (const row of exercise.rows) {
+      const expected = row.inputs.some((value) => value === true)
+      expect(exercise.answerKey[row.id]).toBe(expected)
+    }
+  })
+
+  it('uses expert-equivalent NOT behavior for professor difficulty placeholder', () => {
+    const exercise = generateQuestion('NOT', 'professor', undefined, () => 0)
+    expect(exercise.rows).toHaveLength(16)
+    expect(exercise.inputLabels).toEqual(['A', 'B', 'C', 'D'])
+    for (const row of exercise.rows) {
+      const expected = !((row.inputs[0] !== row.inputs[1]) || (row.inputs[2] === true && row.inputs[3] === true))
+      expect(exercise.answerKey[row.id]).toBe(expected)
+    }
+  })
+
   it('creates Modus Ponens truth tables with implication semantics', () => {
     const exercise = generateQuestion('IMPLIES', 'easy', undefined, () => 0)
     expect(exercise.inputLabels).toEqual(['P', 'Q'])
@@ -152,10 +172,10 @@ describe('question generation', () => {
   })
 
   it('cycles through the full proof set without repeating a rule before each proof type is used once', () => {
-    const first = generateMediumProofExercise('medium')
-    const second = generateMediumProofExercise('medium')
-    const third = generateMediumProofExercise('medium')
-    const fourth = generateMediumProofExercise('medium')
+    const first = generateMediumProofExercise('medium', { allowMediumBridge: false })
+    const second = generateMediumProofExercise('medium', { allowMediumBridge: false })
+    const third = generateMediumProofExercise('medium', { allowMediumBridge: false })
+    const fourth = generateMediumProofExercise('medium', { allowMediumBridge: false })
 
     expect([first.rule, second.rule, third.rule, fourth.rule]).toHaveLength(4)
     expect(new Set([first.rule, second.rule, third.rule, fourth.rule]).size).toBe(4)
@@ -165,13 +185,36 @@ describe('question generation', () => {
   })
 
   it('creates a one-step medium proof with unique conclusions and multiple answer choices', () => {
-    const exercise = generateMediumProofExercise('medium')
+    const exercise = generateMediumProofExercise('medium', { allowMediumBridge: false })
     expect(exercise.kind).toBe('proof')
     expect(exercise.premises.length).toBeGreaterThan(0)
     expect(exercise.options).toHaveLength(3)
     expect(new Set(exercise.options).size).toBe(exercise.options.length)
     expect(exercise.options).toContain(exercise.proofAnswer)
     expect(exercise.conclusion).toBe(exercise.proofAnswer)
+  })
+
+  it('can generate a medium bridge proof once bridge mode is unlocked', () => {
+    const exercise = generateMediumProofExercise('medium', {
+      allowMediumBridge: true,
+      random: () => 0,
+    })
+
+    expect(exercise.kind).toBe('proof')
+    expect(exercise.rule).toBe('multi-step')
+    expect(exercise.premises.length).toBeGreaterThanOrEqual(2)
+    expect(exercise.options).toContain(exercise.proofAnswer)
+  })
+
+  it('generates mostly multi-step proofs for hard and above', () => {
+    const exercise = generateMediumProofExercise('hard', {
+      random: () => 0,
+    })
+
+    expect(exercise.kind).toBe('proof')
+    expect(exercise.rule).toBe('multi-step')
+    expect(exercise.premises.length).toBeGreaterThanOrEqual(3)
+    expect(exercise.options).toContain(exercise.proofAnswer)
   })
 })
 

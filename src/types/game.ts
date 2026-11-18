@@ -2,7 +2,7 @@ export type LogicOperation = 'AND' | 'OR' | 'NOT' | 'XOR' | 'IMPLIES' | 'MODUS_T
 
 export type InferenceRule = 'conjunction' | 'disjunction' | 'modus-ponens' | 'modus-tollens' | 'disjunctive-syllogism' | 'double-negation'
 
-export type Difficulty = 'easy' | 'medium' | 'hard' | 'advanced' | 'expert'
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'advanced' | 'expert' | 'collegiate' | 'professor'
 
 export interface InferenceRuleDefinition {
   id: InferenceRule

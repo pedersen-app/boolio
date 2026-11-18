@@ -21,7 +21,7 @@ const celebrationMessages = [
   'One clean swing and that argument fell perfectly.',
 ]
 const modes: GameMode[] = ['practice', 'test']
-const difficulties: Difficulty[] = ['easy', 'medium', 'hard', 'advanced', 'expert']
+const difficulties: Difficulty[] = ['easy', 'medium', 'hard', 'advanced', 'expert', 'collegiate', 'professor']
 const inferenceRules: InferenceRule[] = inferenceRuleOrder
 const modeLabels: Record<GameMode, string> = {
   practice: 'Practice',
@@ -33,6 +33,8 @@ const difficultyLabels: Record<Difficulty, string> = {
   hard: 'Hard',
   advanced: 'Advanced',
   expert: 'Expert',
+  collegiate: 'Collegiate',
+  professor: 'Professor',
 }
 const inferenceRuleLabels: Record<InferenceRule, string> = Object.fromEntries(
   inferenceRules.map((rule) => [rule, inferenceRuleDefinitions[rule].label]),
@@ -50,6 +52,8 @@ const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, Logic
     hard: ['AND'],
     advanced: ['AND'],
     expert: ['AND'],
+    collegiate: ['AND'],
+    professor: ['AND'],
   },
   disjunction: {
     easy: ['OR'],
@@ -57,6 +61,8 @@ const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, Logic
     hard: ['OR'],
     advanced: ['OR'],
     expert: ['OR'],
+    collegiate: ['OR'],
+    professor: ['OR'],
   },
   'modus-ponens': {
     easy: ['IMPLIES'],
@@ -64,6 +70,8 @@ const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, Logic
     hard: ['IMPLIES'],
     advanced: ['IMPLIES'],
     expert: ['IMPLIES'],
+    collegiate: ['IMPLIES'],
+    professor: ['IMPLIES'],
   },
   'modus-tollens': {
     easy: ['MODUS_TOLLENS'],
@@ -71,6 +79,8 @@ const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, Logic
     hard: ['MODUS_TOLLENS'],
     advanced: ['MODUS_TOLLENS'],
     expert: ['MODUS_TOLLENS'],
+    collegiate: ['MODUS_TOLLENS'],
+    professor: ['MODUS_TOLLENS'],
   },
   'disjunctive-syllogism': {
     easy: ['DISJUNCTIVE_SYLLOGISM'],
@@ -78,6 +88,8 @@ const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, Logic
     hard: ['DISJUNCTIVE_SYLLOGISM'],
     advanced: ['DISJUNCTIVE_SYLLOGISM'],
     expert: ['DISJUNCTIVE_SYLLOGISM'],
+    collegiate: ['DISJUNCTIVE_SYLLOGISM'],
+    professor: ['DISJUNCTIVE_SYLLOGISM'],
   },
   'double-negation': {
     easy: ['DOUBLE_NEGATION'],
@@ -85,6 +97,8 @@ const ruleOperationsByDifficulty: Record<InferenceRule, Record<Difficulty, Logic
     hard: ['DOUBLE_NEGATION'],
     advanced: ['DOUBLE_NEGATION'],
     expert: ['DOUBLE_NEGATION'],
+    collegiate: ['DOUBLE_NEGATION'],
+    professor: ['DOUBLE_NEGATION'],
   },
 }
 
@@ -103,12 +117,15 @@ const isCorrect = ref(false)
 const celebrationVisible = ref(false)
 const celebrationMessage = ref(celebrationMessages[0]!)
 const solvedQuestionId = ref<string | null>(null)
+const isApplyingDifficultyPromotion = ref(false)
 const completedProofRules = ref<Record<Difficulty, string[]>>({
   easy: [],
   medium: [],
   hard: [],
   advanced: [],
   expert: [],
+  collegiate: [],
+  professor: [],
 })
 const difficultyPromotion = ref<{ from: Difficulty, to: Difficulty } | null>(null)
 const activeScore = computed(() => scores.value[mode.value])
@@ -146,6 +163,10 @@ watch([mode, difficulty, inferenceRule], ([nextMode, nextDifficulty, nextInferen
 
   if (nextMode === 'practice') {
     if (nextDifficulty !== prevDifficulty || nextInferenceRule !== prevInferenceRule) {
+      if (isApplyingDifficultyPromotion.value && nextDifficulty !== prevDifficulty) {
+        isApplyingDifficultyPromotion.value = false
+        return
+      }
       startNextQuestion()
     }
     return
@@ -236,8 +257,11 @@ function resetRound(message: string) {
 
 function startNextQuestion() {
   if (difficulty.value !== 'easy') {
-    exercise.value = generateMediumProofExercise(difficulty.value)
-    resetRound('Choose the correct conclusion for this one-step proof.')
+    const mediumBridgeUnlocked = difficulty.value === 'medium' && hasCompletedAllProofTypes('medium')
+    exercise.value = generateMediumProofExercise(difficulty.value, {
+      allowMediumBridge: mediumBridgeUnlocked,
+    })
+    resetRound('Choose the conclusion that follows from the premises.')
     return
   }
 
@@ -296,8 +320,12 @@ function promptForNextDifficulty() {
 function acceptDifficultyPromotion() {
   if (!difficultyPromotion.value) return
 
-  difficulty.value = difficultyPromotion.value.to
+  const promotedDifficulty = difficultyPromotion.value.to
   difficultyPromotion.value = null
+  isApplyingDifficultyPromotion.value = true
+  difficulty.value = promotedDifficulty
+
+  // Force the promoted difficulty immediately so the next puzzle reflects the button choice.
   startNextQuestion()
 }
 

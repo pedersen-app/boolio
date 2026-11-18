@@ -36,6 +36,8 @@ function difficultyProfile(operation: LogicOperation, difficulty: Difficulty): D
       case 'hard': return { inputCount: 2, shuffleRows: true, notVariant: 'and' }
       case 'advanced': return { inputCount: 3, shuffleRows: true, notVariant: 'composite' }
       case 'expert': return { inputCount: 4, shuffleRows: true, notVariant: 'expert' }
+      case 'collegiate': return { inputCount: 4, shuffleRows: true, notVariant: 'expert' }
+      case 'professor': return { inputCount: 4, shuffleRows: true, notVariant: 'expert' }
     }
   }
 
@@ -45,6 +47,8 @@ function difficultyProfile(operation: LogicOperation, difficulty: Difficulty): D
     case 'hard': return { inputCount: 3, shuffleRows: true, notVariant: 'single' }
     case 'advanced': return { inputCount: 4, shuffleRows: true, notVariant: 'single' }
     case 'expert': return { inputCount: 5, shuffleRows: true, notVariant: 'single' }
+    case 'collegiate': return { inputCount: 5, shuffleRows: true, notVariant: 'single' }
+    case 'professor': return { inputCount: 5, shuffleRows: true, notVariant: 'single' }
   }
 }
 
